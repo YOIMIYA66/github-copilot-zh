@@ -52,7 +52,7 @@ This project translates selected fixed **Settings** text and verified static des
 | :--- | :--- |
 | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
 | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons, Composer `Background` / `Artifacts` labels, and exact fixed filter labels only on `role=tab` controls inside a `role=tablist` (e.g. PR filters Authored by me, Assigned to me, Involves me, Review requests, and Done) |
-| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, sidebar **account menu** and **theme submenu**, plus per-account action menus in the **Accounts** Settings page when the trigger belongs to that page; the latter matches only `Update authorization` / `Manage plan` / `Remove account` |
+| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, sidebar **account menu** and **theme submenu**; `Update authorization` / `Manage plan` / `Remove account` are matched only when an action-menu trigger is inside the Accounts Settings page and its popup ownership is valid |
 | **Fixed Settings Choices** | System/Light/Dark controls inside a known Themes settings section and `data-settings-row`, plus Last N day(s) options only in the owned `sessions-cli-sessions` dropdown |
 
 ### 🛡️ Untouched (explicitly excluded, never modified)
@@ -116,10 +116,11 @@ anything. Treat an unverified or pre-release version as such and tell me if
 the app version has not been validated. Save my work, and do not force-close
 Copilot, disable security, expose credentials, or execute an unreviewed remote
 script. Follow the repository's documented installation entry point only if I
-approve the security risks. Verify that Settings and supported static UI labels/descriptions are translated;
+approve the security risks. Verify that Settings and supported static UI labels/descriptions (including an
+account action menu only when its ownership conditions are met) are translated;
 chat messages, tool output, Thinking/status labels, and mode/model names remain
-unchanged. Report any
-failure or uncertainty and explain how to stop and restore the app.
+unchanged. Do not claim unverified controls are fully covered. Report any failure
+or uncertainty and explain how to stop and restore the app.
 ```
 
 ---
@@ -217,10 +218,10 @@ The diagnostic overlay was installed in the running app, stopped/restored, and r
 
 | Synthetic Benchmark Scenario | Metric | Observed Value |
 | :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `240.12 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `214.46 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `214.07 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch count / p95/max; observer callback count / p95/max | `69` / `4.16/4.29 ms`; `173` / `0.09/3.84 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `263.31 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `216.98 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `182.68 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch count / p95/max; observer callback count / p95/max | `66` / `4.19/4.33 ms`; `170` / `0.11/2.21 ms` |
 
 ---
 
