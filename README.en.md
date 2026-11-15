@@ -52,7 +52,7 @@ This project translates selected fixed **Settings** text and verified static des
 | :--- | :--- |
 | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
 | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons, Composer `Background` / `Artifacts` labels, and exact fixed filter labels only on `role=tab` controls inside a `role=tablist` (e.g. PR filters Authored by me, Assigned to me, Involves me, Review requests, and Done) |
-| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, and sidebar **account menu** and its **theme submenu**, when trigger and menu IDs are verified |
+| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, sidebar **account menu** and **theme submenu**, plus per-account action menus in the **Accounts** Settings page when the trigger belongs to that page; the latter matches only `Update authorization` / `Manage plan` / `Remove account` |
 | **Fixed Settings Choices** | System/Light/Dark controls inside a known Themes settings section and `data-settings-row`, plus Last N day(s) options only in the owned `sessions-cli-sessions` dropdown |
 
 ### 🛡️ Untouched (explicitly excluded, never modified)
@@ -209,18 +209,18 @@ The diagnostic overlay was installed in the running app, stopped/restored, and r
 | **~8 s after menu interactions (closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
 | **Final Cumulative Counts** *(incl. 4 root scans)* | `0` | `12` | `24` | `26` | — |
 
-> **Sample Limitations**: These are internal overlay timings, not whole-app CPU, memory, or FPS measurements. This run exercised native-input menu open/close interactions only, without synthetic chat load or a sentence-by-sentence translation coverage audit.
+> **Sample Limitations**: These are internal overlay timings, not whole-app CPU, memory, or FPS measurements. This run exercised native-input menu open/close interactions only, without synthetic chat load or a sentence-by-sentence translation coverage audit. Account action menus and PR/Issue tabs were not individually rechecked in the live app.
 
 ### 2. Synthetic JSDOM Benchmark (`npm run benchmark`, single run)
 
-`npm run benchmark` checks whether synthetic chat-body updates trigger Settings or fixed-UI scans and reports batch timings on a synthetic JSDOM tree (**not a WebView2 measurement, CPU benchmark, or real-world rendering latency claim**):
+`npm run benchmark` checks whether synthetic chat-body updates trigger Settings or fixed-UI scans and reports processing counts and timings on a synthetic JSDOM tree (**not a WebView2 measurement, CPU benchmark, or real-world rendering latency claim**). Last N day(s) is handled only in the owned `sessions-cli-sessions` dropdown. Accounts-page actions are matched only when their trigger belongs to the Accounts Settings page and popup ownership is valid; that menu structure has not been rechecked in the live app.
 
 | Synthetic Benchmark Scenario | Metric | Observed Value |
 | :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `203.31 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `213.52 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `146.49 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.02/4.28 ms`; `0.09/2.56 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `240.12 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `214.46 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `214.07 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch count / p95/max; observer callback count / p95/max | `69` / `4.16/4.29 ms`; `173` / `0.09/3.84 ms` |
 
 ---
 
