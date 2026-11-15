@@ -22,7 +22,10 @@ test("mock CDP installs and removes the overlay in a controlled page", async () 
   } };
   const id = await registerInjection(cdp);
   await evaluateInjection(cdp);
-  await new Promise(resolve => setTimeout(resolve, 0));
+  const deadline = Date.now() + 2000;
+  while (dom.window.document.querySelector("nav span").textContent === "General" && Date.now() < deadline) {
+    await new Promise(resolve => setTimeout(resolve, 0));
+  }
   assert.equal(dom.window.document.querySelector("nav span").textContent, "常规");
   assert.equal(dom.window.document.querySelector("main").textContent, "Thinking");
   await removeInjection(cdp, id);

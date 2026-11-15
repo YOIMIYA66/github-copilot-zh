@@ -52,7 +52,7 @@ This project translates selected fixed **Settings** text and verified static des
 | :--- | :--- |
 | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
 | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
-| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model & reasoning menu**, **add-context menu**, and sidebar **account/profile menu** when trigger and menu IDs match bidirectionally |
+| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, and sidebar **account menu** and its **theme submenu**, when trigger and menu IDs are verified |
 
 ### 🛡️ Untouched (explicitly excluded, never modified)
 
@@ -60,7 +60,7 @@ This project translates selected fixed **Settings** text and verified static des
 | :--- | :--- |
 | **Conversations & Workspace** | Chat messages, `Thinking` and other status labels, tool output, and workspace files/paths |
 | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
-| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and tooltips with unverified ownership (e.g., the standalone Max-tier details tooltip remains in English because its accessible-name relationship to a specific menu option has not been verified) |
+| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and other tooltips with unverified ownership. Model/reasoning details are translated only while a verified model menu is open and the tooltip matches its dedicated details structure; no specific tier association is inferred. |
 
 ---
 
@@ -201,10 +201,10 @@ The diagnostic overlay was installed in the running app, stopped/restored, and r
 
 | Synthetic Benchmark Scenario | Metric | Observed Value |
 | :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `198.23 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `229.63 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `154.37 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.06/4.19 ms`; `0.09/2.01 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `203.31 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `213.52 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `146.49 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.02/4.28 ms`; `0.09/2.56 ms` |
 
 ---
 

@@ -49,10 +49,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const chromeWords = {
     sidebar: ["Manage accounts", "Manage sessions", "Theme", "Keyboard shortcuts", "Health check",
       "What's new", "About", "Help center", "Sign out"],
+    sidebarTheme: ["System", "Light", "Dark", "Open themes settings"],
     composerMode: ["Mode", "Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption", "Tool permissions", "Approve all"],
+    composerPermissions: ["Always ask", "Ask every time", "Assisted", "Uses AI to reduce approval prompts.",
+      "Ask before running tools."],
     composerModel: ["Effort level", "Learn more",
-      "30% discount until Nov 30"],
+      "Prioritizes capable models for challenging tasks and deeper reasoning.", "30% discount until Nov 30"],
     composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"]
   };
   const chromeRootSelectors = [
@@ -154,7 +157,23 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (!trigger || !trigger.id || trigger.getAttribute("aria-expanded") !== "true" ||
         trigger.getAttribute("aria-haspopup") !== "menu") return null;
     if (isSidebarMenuTrigger(trigger)) return "sidebar";
-    return composerMenuKind(trigger);
+    const directKind = composerMenuKind(trigger);
+    if (directKind) return directKind;
+    const parentMenu = trigger.closest('[role="menu"][id][aria-labelledby]');
+    const parentTrigger = parentMenu && document.getElementById(parentMenu.getAttribute("aria-labelledby"));
+    const parentKind = parentTrigger && chromeMenuKind(parentTrigger);
+    if (!parentMenu || !parentTrigger || !parentKind || !parentMenu.contains(trigger) ||
+        parentTrigger.getAttribute("aria-controls") !== parentMenu.id ||
+        !parentMenu.hasAttribute("data-open") || !parentMenu.hasAttribute("data-rootownerid") ||
+        !parentMenu.parentElement?.matches('[role="presentation"][data-open]') ||
+        !parentMenu.parentElement.parentElement?.matches("[data-base-ui-portal]")) return null;
+    const item = trigger.closest('[role="menuitem"]');
+    if (!item || item.closest('[role="menu"]') !== parentMenu) return null;
+    const label = item.textContent.trim();
+    if (parentKind === "sidebar" && (label === "Theme" || label === dictionary.Theme)) return "sidebarTheme";
+    if (parentKind === "composerMode" &&
+        (label === "Tool permissions" || label === dictionary["Tool permissions"])) return "composerPermissions";
+    return null;
   }
 
   function chromePopupText(owner, element, text) {
@@ -163,6 +182,22 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       return owner.words.includes(text) &&
         !!element.closest('[role="menuitem"]') &&
         element.parentElement?.tagName === "SPAN";
+    }
+    if (owner.kind === "sidebarTheme") {
+      return owner.words.includes(text) &&
+        (!!element.closest('[role="menuitem"],[role="menuitemradio"]'));
+    }
+    if (owner.kind === "composerPermissions") {
+      if (["Always ask", "Ask every time", "Assisted"].includes(text)) {
+        return owner.words.includes(text) && !!element.closest('[role="menuitemradio"]');
+      }
+      return owner.words.includes(text) &&
+        !!element.closest('[role="menuitemradio"] [data-menu-description]');
+    }
+    if (owner.kind === "composerModelDetails") {
+      return element.tagName === "P" &&
+        (text === "Prioritizes capable models for challenging tasks and deeper reasoning." ||
+          /^\d+(?:\.\d+)?% discount until Nov \d{1,2}$/.test(text));
     }
     if (["Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption"].includes(text)) {
@@ -177,6 +212,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     }
     if (text === "Effort level") return owner.kind === "composerModel" && !!element.closest('[role="none"]');
     if (text === "Learn more") return owner.kind === "composerModel" && element.matches("a[href]");
+    if (text === "Prioritizes capable models for challenging tasks and deeper reasoning.") {
+      return owner.kind === "composerModelDetails" && element.tagName === "P";
+    }
     if (owner.kind === "composerModel" && /^\d+(?:\.\d+)?% discount until Nov \d{1,2}$/.test(text)) {
       return !!element.closest('[role="none"] span[id]');
     }
@@ -223,7 +261,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function scanChromePortal(portalNode) {
     if (!portalNode || portalNode.nodeType !== 1 || !portalNode.matches("[data-base-ui-portal]")) return;
-    for (const popup of portalNode.querySelectorAll('[role="menu"][id][aria-labelledby]')) {
+    for (const popup of portalNode.querySelectorAll('[role="menu"][id][aria-labelledby],[role="dialog"][data-auto-tier-details-overlay]')) {
       if (!ownedPopup(popup)) continue;
       observeChromePopup(popup);
       scan(popup, "portal");
@@ -334,7 +372,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const credits = /^AI credits used: (\d+(?:\.\d+)?)%$/.exec(text);
       if (credits) return `AI 点数已使用：${credits[1]}%`;
     }
-    if (popup?.kind === "composerModel") {
+    if (popup?.kind === "composerModel" || popup?.kind === "composerModelDetails") {
       const discount = /^(\d+(?:\.\d+)?)% discount until (Nov \d{1,2})$/.exec(text);
       if (discount) return `优惠 ${discount[1]}%，截止至 ${discount[2].replace("Nov ", "11 月 ")} 日`;
     }
@@ -357,6 +395,20 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function ownedPopup(element) {
     if (!element) return false;
+    const details = element.closest('[role="dialog"][data-auto-tier-details-overlay]');
+    if (details) {
+      const presentation = details.parentElement;
+      const portalWrapper = presentation?.parentElement;
+      const hasOpenModelMenu = [...document.querySelectorAll('[role="menu"][id][aria-labelledby]')]
+        .some(menu => ownedPopup(menu)?.kind === "composerModel");
+      if (details.id && details.getAttribute("aria-labelledby") && hasOpenModelMenu &&
+          details.hasAttribute("data-open") &&
+          presentation?.matches('[role="presentation"][data-open]') &&
+          portalWrapper?.matches("[data-base-ui-portal]")) {
+        return { popup: details, words: chromeWords.composerModel, kind: "composerModelDetails" };
+      }
+      return null;
+    }
     const popup = element.closest('[role="listbox"][id],[role="menu"][aria-labelledby]');
     if (!popup) return null;
     const role = popup.getAttribute("role");
@@ -702,6 +754,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           const controlled = record.target.getAttribute("aria-controls");
           const inactivePopup = controlled && document.getElementById(controlled);
           if (inactivePopup && chromePopupObservers.has(inactivePopup)) stopObservingChromePopup(inactivePopup);
+          for (const popup of chromePopupObservers.keys()) {
+            if (!ownedPopup(popup)) stopObservingChromePopup(popup);
+          }
         }
         if (record.target.matches('[role="menu"][aria-labelledby]')) {
           if (ownedPopup(record.target)) scan(record.target, "portal");
