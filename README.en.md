@@ -13,6 +13,16 @@
 
 **[简体中文](./README.md) | English**
 
+<p align="center">
+  <a href="#-key-features">Key Features</a> •
+  <a href="#-translation-scope--boundaries">Scope</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-ask-an-ai-assistant-to-help-install">AI Install</a> •
+  <a href="#-security-and-troubleshooting">Troubleshooting</a> •
+  <a href="#-how-it-works--project-structure">How It Works</a> •
+  <a href="#-performance-design--sample-metrics">Performance</a>
+</p>
+
 </div>
 
 ---
@@ -36,14 +46,21 @@ This project translates selected fixed **Settings** text and verified static des
 
 ## 🎯 Translation Scope & Boundaries
 
-| Policy | UI Area | Details |
-| :--- | :--- | :--- |
-| **✅ Translated** | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
-| **✅ Translated** | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
-| **✅ Translated** | **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model & reasoning menu**, **add-context menu**, and sidebar **account/profile menu** when trigger and menu IDs match bidirectionally |
-| **🛡️ Untouched** | **Conversations & Workspace** | Chat messages, `Thinking` and other status labels, tool output, and workspace files/paths |
-| **🛡️ Untouched** | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
-| **🛡️ Untouched** | **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and tooltips with unverified ownership (e.g., the standalone Max-tier details tooltip remains in English because its accessible-name relationship to a specific menu option has not been verified) |
+### ✅ Translated (structural allowlist + exact dictionary match)
+
+| UI Area | Details |
+| :--- | :--- |
+| **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
+| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
+| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model & reasoning menu**, **add-context menu**, and sidebar **account/profile menu** when trigger and menu IDs match bidirectionally |
+
+### 🛡️ Untouched (explicitly excluded, never modified)
+
+| UI Area | Details |
+| :--- | :--- |
+| **Conversations & Workspace** | Chat messages, `Thinking` and other status labels, tool output, and workspace files/paths |
+| **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
+| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and tooltips with unverified ownership (e.g., the standalone Max-tier details tooltip remains in English because its accessible-name relationship to a specific menu option has not been verified) |
 
 ---
 
