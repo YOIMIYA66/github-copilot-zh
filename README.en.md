@@ -3,6 +3,8 @@
 # GitHub Copilot Desktop UI in Chinese
 ### GitHub Copilot Desktop 中文汉化层
 
+*A non-invasive, in-memory Chinese localization overlay for GitHub Copilot Desktop powered by a strict structural allowlist and a hand-written dictionary*
+
 [![Platform](https://img.shields.io/badge/Platform-Windows%20(WebView2)-0078D4?logo=windows)](https://learn.microsoft.com/microsoft-edge/webview2/)
 [![Target](https://img.shields.io/badge/Copilot%20Desktop-1.4.2-24292F?logo=githubcopilot)](https://github.com/features/copilot)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A5%2022-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
@@ -20,53 +22,48 @@
 > [!IMPORTANT]
 > **Source preview:** The overlay has been partially checked in a running application, but the normal launcher has not been tested end to end. Translation coverage is incomplete. The development target is **GitHub Copilot desktop 1.4.2** on Windows using WebView2 (this is not a claim of full version compatibility; the desktop app, WebView2 DOM, and debugging interface may change without notice, and other versions have not been tested).
 
-This project translates selected fixed Settings text and verified static desktop UI in GitHub Copilot desktop using a strict structural allowlist and a **hand-written Chinese dictionary**.
+This project translates selected fixed **Settings** text and verified static desktop UI controls in GitHub Copilot desktop using a strict DOM structural allowlist and a **hand-written Chinese dictionary**.
+
+---
 
 ## ✨ Key Features
 
-- **Hand-Written Dictionary, Zero External Calls**: Does not use machine translation, download a model, or require an API key. Zero npm production dependencies at runtime.
-- **Non-Invasive In-Memory Overlay**: Never modifies the application executable (`github.exe`) or installation files. Press `Ctrl+C` or restart the app normally to restore everything cleanly.
-- **Strict Translation Boundaries**: Translates fixed Settings text, static sidebar and Composer labels, and fixed copy in menus whose triggers and menu IDs are bidirectionally verified. Chat messages, tool output, Thinking/status labels, code, personal input/profile data, counts, and dynamic mode/model names stay unchanged.
-- **Multi-Layer Security Verification**: Verifies Authenticode signatures for both `github.exe` (`GitHub, Inc.`) and `msedgewebview2.exe` (`Microsoft Corporation`), process ancestry, page origin (`http://tauri.localhost`), and `127.0.0.1` loopback binding before and after connecting.
-- **Scoped Observation & Bounded Batching**: Observes narrow fixed-control roots, direct children of the main container, and verified open menus; it does not observe the conversation body subtree. Settings and menu changes are processed in bounded batches (up to 150 nodes or 4 ms per slice).
-
-## 🎯 Translation Scope & Sample Metrics
-
-| Category | Policy | Details |
-| :--- | :--- | :--- |
-| **✅ Translated** | Structural allowlist + exact dictionary match | Settings navigation, section headers, titles and descriptions; supported split paragraphs; sidebar Automations/Customize; Composer Background/Artifacts labels; and fixed copy in bidirectionally verified mode, model, context, and profile menus |
-| **🛡️ Untouched** | Explicitly excluded & protected | Chat messages, Thinking and other status labels, tool output, workspace content, code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), user input, project/repository/profile data, counts, and names such as Interactive/Plan/Autopilot, models, and tiers |
-
-Tooltips with unverified ownership remain in English. For example, the standalone Max-tier details tooltip is not translated because its accessible-name relationship to a specific menu option has not been verified.
-
-**Performance Note:** This design does not guarantee zero overhead or smooth rendering on every device. `npm run benchmark` checks whether synthetic chat-body updates trigger Settings or fixed-UI scans and reports batch timings on a JSDOM DOM. This is not a WebView2 measurement, CPU benchmark, or real-world latency claim.
-
-| Synthetic Benchmark Scenario | Metric | Observed Value |
-| :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `198.23 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `229.63 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `154.37 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.06/4.19 ms`; `0.09/2.01 ms` |
-
-**WebView2 diagnostic-attachment sample (GitHub Copilot desktop 1.4.2, one run):** The diagnostic overlay was installed in the running app, stopped/restored, and replaced with the normal `measure: false` overlay; the app was not restarted, and no input or menu value was changed. In closed-menu samples of about eight seconds before and after the menu interactions, deltas for `settingsScans`, `portalScans`, `chromeScans`, and `callbacks` were all `0`. Opening and closing each of the four menus once with native input produced deltas of `0/12/20/23`; five processing batches measured p95/max `1.40 ms` and `3.60 ms` total, while 26 callbacks measured p95 `0.30 ms`, max `0.40 ms`, and `2.50 ms` total. Final cumulative counts were `settingsScans=0`, `portalScans=12`, `chromeScans=24`, and `callbacks=26` (including four initial chrome-root scans). These are overlay timings, not whole-app CPU, memory, or FPS measurements; the sample is small and not a general performance guarantee. This script exercised menus only, without synthetic chat load or a sentence-by-sentence translation coverage audit.
+- **📖 Hand-Written Dictionary, Zero External Calls**: Does not use machine translation, download a model, or require an API key. Zero npm production dependencies at runtime.
+- **🛡️ Non-Invasive In-Memory Overlay**: Never modifies the application executable (`github.exe`) or installation files. Press `Ctrl+C` or restart the app normally to restore everything cleanly.
+- **🎯 Strict Translation Boundaries**: Translates fixed Settings text, static sidebar and Composer labels, and fixed copy in menus whose triggers and menu IDs are bidirectionally verified. Chat messages, tool output, Thinking/status labels, code, personal input/profile data, counts, and dynamic mode/model names stay unchanged.
+- **🔐 Multi-Layer Security Verification**: Verifies Authenticode signatures for both `github.exe` (`GitHub, Inc.`) and `msedgewebview2.exe` (`Microsoft Corporation`), process ancestry, page origin (`http://tauri.localhost`), and `127.0.0.1` loopback binding before and after connecting.
+- **⚡ Scoped Observation & Bounded Batching**: Observes narrow fixed-control roots, direct children of the main container, and verified open menus; **it does not observe the conversation body subtree**. Settings and menu changes are processed in bounded batches (up to 150 nodes or 4 ms per slice).
 
 ---
 
-## 📋 Requirements
+## 🎯 Translation Scope & Boundaries
 
-- **OS & Application**: Windows, and **GitHub Copilot desktop** with WebView2 (target version `1.4.2`).
-- **PowerShell**: PowerShell 7 or newer (`pwsh`).
-- **Node.js**: Node.js 22 or newer (the runtime has no npm production dependencies).
-- **Git**: A normal Git installation to clone the project.
+| Category | UI Area | Details |
+| :--- | :--- | :--- |
+| **✅ Translated**<br>*(Structural allowlist + exact dictionary match)* | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
+| | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
+| | **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model & reasoning menu**, **add-context menu**, and sidebar **account/profile menu** when trigger and menu IDs match bidirectionally |
+| **🛡️ Untouched**<br>*(Explicitly excluded & protected)* | **Conversations & Workspace** | Chat messages, Thinking and other status labels, tool output, and workspace files/paths |
+| | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
+| | **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and tooltips with unverified ownership (e.g., the standalone Max-tier details tooltip remains in English because its accessible-name relationship to a specific menu option has not been verified) |
 
 ---
 
-## 🚀 Installation and Use
+## 🚀 Quick Start
+
+### 1. Requirements
+
+| Component | Requirement |
+| :--- | :--- |
+| **OS & Application** | Windows, and **GitHub Copilot desktop** with WebView2 (target version `1.4.2`) |
+| **PowerShell** | PowerShell 7 or newer (`pwsh`) |
+| **Node.js** | Node.js 22 or newer (zero npm production dependencies at runtime) |
+| **Git** | Standard Git installation to clone the repository |
+
+### 2. Clone and Launch
 
 > [!NOTE]
 > These steps use the source preview. The normal launcher has not yet been validated end to end with a newly started application. During the startup wait, pressing `Ctrl+C` may still exit with a non-zero code. **Save your work and exit Copilot normally before running it.** Do not terminate Copilot forcibly or disable operating-system security.
-
-### 1. Clone and Launch
 
 ```powershell
 git clone https://github.com/YOIMIYA66/github-copilot-zh.git
@@ -79,24 +76,13 @@ pwsh -NoProfile -File .\start.ps1
   ```powershell
   pwsh -NoProfile -File .\start.ps1 -AppPath "D:\CustomPath\GitHub Copilot\github.exe"
   ```
-- **How It Works**: Keep the terminal open while using Copilot. The launcher checks the installed executable's Authenticode signature, starts a new application process with a loopback (`127.0.0.1`) WebView2 debugging port, and checks the listener's process ancestry and signature before connecting. **It refuses to attach to an existing app.**
+- **Runtime Behavior**: **Keep the terminal open** while using Copilot. The launcher starts a new signed application process and refuses to attach to an already-running instance.
 
-### 2. Stop and Restore
+### 3. Stop and Restore
 
-- Press **`Ctrl+C`** in the terminal to request restoration of translated text.
-- Exit Copilot normally and start it from its usual shortcut to remove the debug port as well.
-- If the launcher or connection exits unexpectedly, normal app exit and restart clears the in-memory overlay. No settings values are intended to be changed.
-
----
-
-## 🔒 Security and Troubleshooting
-
-> [!WARNING]
-> **Local Debugging Port Notice:** The debugging port is unauthenticated—other processes running as your user may be able to inspect or modify the application while debugging is enabled. Use it only on a trusted machine and close the app normally when finished. CDP and the WebView2 debug arguments are not stable Copilot APIs.
-
-- **Existing `github.exe` process reported**: Save your work and exit that application normally before retrying (the launcher never terminates existing processes).
-- **Verification or connection failure**: If signature, listener, page identity, or connection checks fail, the launcher stops instead of connecting to an unrecognized target. It does not terminate the app.
-- **Labels remain English or controls behave unexpectedly**: Stop the overlay and restart the app normally; the target version or DOM markup may have changed.
+- **Live Restore**: Press **`Ctrl+C`** in the terminal to unload the overlay and restore translated text back to English.
+- **Remove Debug Port**: Exit Copilot normally and start it from its usual shortcut.
+- **Unexpected Exit Recovery**: If the launcher or connection exits unexpectedly, normal app exit and restart clears the in-memory overlay. No persistent settings values are changed.
 
 ---
 
@@ -122,6 +108,83 @@ failure or uncertainty and explain how to stop and restore the app.
 
 ---
 
+## 🔒 Security and Troubleshooting
+
+> [!WARNING]
+> **Local Debugging Port Notice:** The debugging port is unauthenticated—other processes running as your user may be able to inspect or modify the application while debugging is enabled. Use it only on a trusted machine and close the app normally when finished. CDP and the WebView2 debug arguments are not stable Copilot APIs.
+
+| Issue / Symptom | Cause & Resolution |
+| :--- | :--- |
+| **Existing `github.exe` process reported** | The launcher never terminates or attaches to existing processes. Save your work, exit Copilot normally, and retry. |
+| **Verification or connection check fails** | If signature, listener, page identity, or connection checks fail, the launcher stops immediately without connecting to an unrecognized target or terminating the app. |
+| **Labels remain English or controls behave unexpectedly** | The target version or DOM markup may have changed. Press `Ctrl+C` to stop the overlay and restart the app normally. |
+
+---
+
+## 🔍 How It Works & Project Structure
+
+### Lifecycle
+
+1. **Pre-flight & Signature Check (`start.ps1`)**: Verifies PowerShell 7+ and Node.js 22+, checks the `GitHub, Inc.` Authenticode signature on `github.exe`, and ensures no `github.exe` instance is already running.
+2. **Loopback Debug Launch (`start.ps1`)**: Allocates an ephemeral loopback port and launches `github.exe` with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` bound strictly to `127.0.0.1`.
+3. **Dual Process & Target Verification (`connect.js` / `verify-listener.ps1` / `cdp.js`)**: Before fetching `/json/list` and again after WebSocket open, verifies that the port is exclusively bound to `127.0.0.1` by a `Microsoft Corporation`-signed `msedgewebview2.exe` descending from the launched `github.exe` PID, and validates the `http://tauri.localhost` page target.
+4. **Scoped Injection & Clean Restoration (`runner.js` / `injection.js` / `overlay.js`)**: Injects the scoped `MutationObserver` and dictionary; on `Ctrl+C`, deregisters the script and restores all tracked text nodes and attributes to their original values.
+
+### Directory Layout
+
+```text
+github-copilot-zh/
+├── start.ps1                # PowerShell launcher (checks prerequisites, verifies signature, starts app)
+├── src/
+│   ├── runner.js            # Main runner (manages CDP lifecycle, script registration, and Ctrl+C cleanup)
+│   ├── connect.js           # Verified connector (runs verify-listener.ps1 before and after WebSocket open)
+│   ├── verify-listener.ps1  # Verifies loopback binding, WebView2 signature, and process tree ancestry
+│   ├── cdp.js               # Zero-dependency minimal CDP client and page target selector (selectTarget)
+│   ├── injection.js         # Page injection payload generator, removal logic, and diagnostic actions
+│   ├── overlay.js           # Core DOM overlay (structural allowlists, MutationObserver, bounded batching)
+│   ├── dictionary.js        # Hand-written English-to-Chinese fixed UI dictionary
+│   └── diagnose.js          # Developer diagnostic CLI (install / status / stop)
+└── test/
+    ├── benchmark.js         # Synthetic JSDOM benchmark script
+    ├── cdp.test.js          # Unit tests for CDP client and target selection
+    ├── chrome.test.js       # Unit tests for static main-window UI and verified menus
+    ├── injection.test.js    # Unit tests for script injection, origin checks, and diagnostics
+    ├── overlay.test.js      # Unit tests for Settings translation, dynamic mutations, and restoration
+    └── settings-pages.test.js # Unit tests for Settings page structural coverage
+```
+
+---
+
+## ⚡ Performance Design & Sample Metrics
+
+This design aims to keep overhead low and avoid observing streaming chat, **but does not guarantee zero overhead or smooth rendering on every device**. Below are single-run real-app and synthetic JSDOM samples for reference (timings vary by hardware and workload and are not a general performance guarantee).
+
+### 1. WebView2 Diagnostic-Attachment Sample (GitHub Copilot desktop 1.4.2, single run)
+
+The diagnostic overlay was installed in the running app, stopped/restored, and replaced with the normal `measure: false` overlay without restarting the app or changing any input or menu selection:
+
+| Sample Window | `settingsScans` | `portalScans` | `chromeScans` | `callbacks` | Overlay Timing Summary |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **~8 s before menu interactions (menus closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
+| **Open & close each of the 4 menus once (native input)** | `+0` | `+12` | `+20` | `+23` | **5 processing batches**: p95 / max `1.40 ms` (`3.60 ms` total)<br>**26 observer callbacks**: p95 `0.30 ms` / max `0.40 ms` (`2.50 ms` total) |
+| **~8 s after menu interactions (menus closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
+| **Final Cumulative Counts** *(incl. 4 initial chrome-root scans)* | `0` | `12` | `24` | `26` | — |
+
+> **Sample Limitations**: These are internal overlay timings, not whole-app CPU, memory, or FPS measurements. This run exercised menus only, without synthetic chat load or a sentence-by-sentence translation coverage audit.
+
+### 2. Synthetic JSDOM Benchmark (`npm run benchmark`, single run)
+
+`npm run benchmark` checks whether synthetic chat-body updates trigger Settings or fixed-UI scans and reports batch timings on a synthetic JSDOM tree (**not a WebView2 measurement, CPU benchmark, or real-world rendering latency claim**):
+
+| Synthetic Benchmark Scenario | Metric | Observed Value |
+| :--- | :--- | :--- |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `198.23 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `229.63 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `154.37 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.06/4.19 ms`; `0.09/2.01 ms` |
+
+---
+
 ## 🛠️ Development
 
 ### Tests and Benchmark
@@ -131,7 +194,7 @@ failure or uncertainty and explain how to stop and restore the app.
 ```powershell
 npm install
 npm test           # Run isolated unit tests
-npm run benchmark  # Run synthetic DOM benchmark (not a WebView2 measurement or real-world latency claim)
+npm run benchmark  # Run synthetic DOM benchmark
 ```
 
 ### Diagnostic Attachment
@@ -149,3 +212,9 @@ node .\src\diagnose.js stop $port $appPid $app.ExecutablePath
 
 - **Verification**: Each command verifies the loopback listener, its WebView2 signature and ancestry, the signed app process, and the page target before attaching. Installation affects only the current page; it does not register a script for future navigations. `stop` restores the diagnostic overlay's changes without closing the app and does not stop unrelated overlays.
 - **Privacy-Preserving Metrics**: `status` returns only `settingsScans`, `portalScans`, `chromeScans`, `callbacks`, a cumulative count of distinct eligible fixed text nodes without a matching translation, and up to the latest 512 `batchMs` and `callbackMs` duration samples. **It does not return page text, account details, paths, or input values.** The unmatched count covers only the supported structural allowlist, can include fragments, and is **not** a count of all untranslated UI; zero does not mean complete coverage.
+
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](./LICENSE).
