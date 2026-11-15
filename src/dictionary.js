@@ -27,6 +27,7 @@ export const dictionary = {
   "Mentioned": "提及我的",
   "Done": "已完成",
   "Background": "后台",
+  "Artifacts": "产物",
   "Step-by-step collaboration": "逐步协作",
   "Plan first, execute when ready": "先制定计划，准备就绪后执行",
   "End-to-end execution without interruption": "不中断地端到端执行",

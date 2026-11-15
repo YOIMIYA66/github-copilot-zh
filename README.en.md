@@ -38,7 +38,7 @@ This project translates selected fixed **Settings** text and verified static des
 
 - **📖 Hand-Written Dictionary, Zero External Calls**: Does not use machine translation, download a model, or require an API key. Zero npm production dependencies at runtime.
 - **🛡️ Non-Invasive In-Memory Overlay**: Never modifies the application executable (`github.exe`) or installation files. Press `Ctrl+C` or restart the app normally to restore everything cleanly.
-- **🎯 Strict Translation Boundaries**: Translates fixed Settings text, static sidebar and Composer labels, and fixed copy in menus whose triggers and menu IDs are bidirectionally verified. Chat messages, the Artifacts activity chip, tool output, Thinking/status labels, code, personal input/profile data, counts, and dynamic mode/model names stay unchanged.
+- **🎯 Strict Translation Boundaries**: Translates fixed Settings text, static sidebar and Composer labels, and fixed copy in menus whose triggers and menu IDs are bidirectionally verified. Chat messages, tool output, Thinking/status labels, code, personal input/profile data, counts, and dynamic mode/model names stay unchanged.
 - **🔐 Multi-Layer Security Verification**: Verifies Authenticode signatures for both `github.exe` (`GitHub, Inc.`) and `msedgewebview2.exe` (`Microsoft Corporation`), process ancestry, page origin (`http://tauri.localhost`), and `127.0.0.1` loopback binding before and after connecting.
 - **⚡ Scoped Observation & Bounded Batching**: Observes narrow fixed-control roots, direct children of the main container, and verified open menus; **it does not observe the conversation body subtree**. Settings and menu changes are processed in bounded batches (up to 150 nodes or 4 ms per slice).
 
@@ -51,7 +51,7 @@ This project translates selected fixed **Settings** text and verified static des
 | UI Area | Details |
 | :--- | :--- |
 | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
-| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons, the Composer `Background` label, and exact fixed filter labels only on `role=tab` controls inside a `role=tablist` (e.g. PR filters Authored by me, Assigned to me, Involves me, Review requests, and Done) |
+| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons, Composer `Background` / `Artifacts` status labels, and exact fixed filter labels only on `role=tab` controls inside a `role=tablist` (e.g. PR filters Authored by me, Assigned to me, Involves me, Review requests, and Done) |
 | **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, sidebar **account menu** and **theme submenu**; `Update authorization` / `Manage plan` / `Remove account` are matched only when an action-menu trigger is inside the Accounts Settings page and its popup ownership is valid |
 | **Fixed Settings Choices** | System/Light/Dark controls inside a known Themes settings section and `data-settings-row`, plus Last N day(s) options only in the owned `sessions-cli-sessions` dropdown |
 
@@ -59,7 +59,7 @@ This project translates selected fixed **Settings** text and verified static des
 
 | UI Area | Details |
 | :--- | :--- |
-| **Conversations & Workspace** | Chat messages, `Thinking` / `Thought for N seconds` and other status labels, tool output, `Sent message …` lines, message footer metadata, the `Artifacts N` activity chip above the composer, and workspace files/paths |
+| **Conversations & Workspace** | Chat messages, `Thinking` / `Thought for N seconds` and other status labels, tool output, `Sent message …` lines, message-footer relative time and model information, and workspace files/paths. Footer ownership has not been verified, so these labels remain unchanged and are not scanned in this preview. |
 | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
 | **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and other tooltips with unverified ownership. Model/reasoning details are translated only while a verified model menu is open and the tooltip matches its dedicated details structure; no specific tier association is inferred. PR/Issue filters are matched only within semantic `role=tablist` / `role=tab` controls; the specific Issue tabs have not been individually verified in the live app. |
 
@@ -119,10 +119,13 @@ script. Follow the repository's documented installation entry point only if I
 approve the security risks. Verify that Settings and supported static UI labels/descriptions (including an
 account action menu only when its ownership conditions are met) are translated;
 chat messages, tool output, Thinking/status labels, and mode/model names remain
-unchanged. Keep Thinking / Thought for N seconds, Artifacts activity chips, and
-message footer metadata in English. Do not claim unverified controls are fully
-covered. Report any failure or uncertainty and explain how to stop and restore
-the app.
+unchanged. Keep Thinking / Thought for N seconds and Sent message lines in
+English. Translate the supported Artifacts status chip, but do not translate
+Artifacts text appearing in message bodies. Message-footer relative time and
+model labels are not supported in this preview because their DOM ownership has
+not been verified; leave them unchanged and do not scan the transcript to find
+them. Do not claim unverified controls are fully covered. Report any failure or
+uncertainty and explain how to stop and restore the app.
 ```
 
 ---
@@ -220,10 +223,10 @@ The diagnostic overlay was installed in the running app, stopped/restored, and r
 
 | Synthetic Benchmark Scenario | Metric | Observed Value |
 | :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `210.87 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `215.57 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `130.18 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch count / p95/max; observer callback count / p95/max | `65` / `4.02/4.19 ms`; `171` / `0.08/1.84 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `252.08 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `231.06 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `173.12 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch count / p95/max; observer callback count / p95/max | `69` / `4.06/6.92 ms`; `173` / `0.10/2.31 ms` |
 
 ---
 

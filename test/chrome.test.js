@@ -62,7 +62,7 @@ function fixture() {
       </nav>
       <div class="chat">
         <p>Background</p><p>Artifacts</p><p>Thinking</p><p>Thought for 2 seconds</p>
-        <p>Sent message to user</p><footer>Message metadata</footer><p>Artifacts 22</p>
+        <p>Sent message to user</p><footer>1m ago · Claude Opus 5.5</footer><p>Artifacts 22</p>
       </div>
     </div>
   </main>
@@ -137,6 +137,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   await waitFor(() => [...modePopup.querySelectorAll("[data-menu-description]")].every((node, index) =>
     node.textContent === ["逐步协作", "先制定计划，准备就绪后执行", "不中断地端到端执行"][index]) &&
     document.getElementById("profile-popup-generated").textContent.includes("管理账户") &&
+    document.querySelector('[data-testid="artifact-files-pill"]').textContent.startsWith("产物") &&
     document.querySelector("#model-popup-generated [role=none] div").textContent === "推理强度" &&
     document.querySelector('#model-popup-generated a[href="#learn"]').firstChild.nodeValue === "了解详情" &&
     [...document.querySelectorAll('[role="none"] span[id]')].map(node => node.textContent).join("|") ===
@@ -158,7 +159,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(document.querySelector('[data-testid="background-activity-pill"] .count').textContent, "4");
   assert.equal(document.querySelector('[data-testid="artifact-files-pill"] .count').textContent, "2");
   assert.equal(document.querySelector('[data-testid="background-activity-pill"]').textContent, "后台4");
-  assert.equal(document.querySelector('[data-testid="artifact-files-pill"]').textContent, "Artifacts2");
+  assert.equal(document.querySelector('[data-testid="artifact-files-pill"]').textContent, "产物2");
   assert.deepEqual([...modePopup.querySelectorAll("[data-menu-description]")].map(node => node.textContent),
     ["逐步协作", "先制定计划，准备就绪后执行", "不中断地端到端执行"]);
   assert.equal(modePopup.querySelector("#mode-title-generated").textContent, "模式");
@@ -187,7 +188,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(document.querySelector('#unrelated-popup [role=menuitem]').textContent, "Manage sessions");
   assert.equal(document.getElementById("profile-menu-generated").getAttribute("aria-label"), "Fictional User, open user menu");
   assert.deepEqual([...document.querySelector(".chat").children].map(node => node.textContent),
-    ["Background", "Artifacts", "Thinking", "Thought for 2 seconds", "Sent message to user", "Message metadata", "Artifacts 22"]);
+    ["Background", "Artifacts", "Thinking", "Thought for 2 seconds", "Sent message to user", "1m ago · Claude Opus 5.5", "Artifacts 22"]);
   const scans = overlay.stats.settingsScans;
   const callbacks = overlay.stats.callbacks;
   document.querySelector(".chat p").firstChild.nodeValue = "Updated message";

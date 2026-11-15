@@ -300,7 +300,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const button = element.closest("button[data-testid]");
       if (!button || !root.contains(button)) return false;
       return (button.matches('button[data-testid="background-activity-pill"][aria-controls="background-activity-list"]') &&
-          text === "Background");
+          text === "Background") ||
+        (button.matches('button[data-testid="artifact-files-pill"][aria-controls="artifact-files-list"]') &&
+          text === "Artifacts");
     }
     return false;
   }
