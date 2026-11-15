@@ -1,0 +1,176 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { JSDOM } from "jsdom";
+import { dictionary } from "../src/dictionary.js";
+import { startSettingsTranslation } from "../src/overlay.js";
+
+async function waitFor(predicate) {
+  const end = Date.now() + 2000;
+  while (!predicate() && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 0));
+  assert.ok(predicate(), "timed out waiting for overlay");
+}
+
+function fixture() {
+  const dom = new JSDOM(`<body><main>Thinking</main><div id="portal-root"><div role="dialog" data-settings-dialog-root>
+    <section data-settings-scroll aria-label="Sessions">
+      <section data-section-id="sessions-default-model"><div><div><h2>Default model for new sessions</h2><p>Choose whether new sessions use the latest model selected in any session or a preferred model.</p></div><div><button>Personal model</button></div></div></section>
+      <section data-section-id="sessions-instructions">
+        <div><div><h2>Instructions</h2><p><span>Preferences that apply to every session across all repositories. Copilot may also load instructions from files on this machine.</span></p></div></div>
+        <div><div><h3>App instructions</h3><p>Editable instructions stored by this app and added to new sessions.</p><textarea>App instructions</textarea></div></div>
+        <div><div><h3>File-backed instructions</h3><p>These files are discovered by the Copilot runtime and applied when enabled. Edit the source file to change them.</p><div><p>No file-backed instructions were found.</p></div></div></div>
+        <ul><li><h3>App instructions</h3></li></ul>
+      </section>
+      <section data-section-id="sessions-auto-approve"><div><div><h2>Tool permissions</h2><p><span id="permissions"></span></p></div></div></section>
+      <section data-section-id="sessions-commit-attribution"><div><div><h2>Commit attribution</h2><p><span id="commit"></span></p></div></div></section>
+      <section data-section-id="sessions-branch-prefix"><div><div><h2>Default branch prefix</h2><p><span id="branch"></span></p></div></div><input value="fictional-user"></section>
+      <section data-section-id="sessions-worktree-location"><div><div><h2>Worktree location</h2><p><span id="worktree"></span></p></div></div><p>Example: C:\\fictional\\path</p></section>
+    </section>
+    <section data-settings-scroll aria-label="Themes"><section data-section-id="themes-palette"><div><div><h2>Palettes</h2><p id="palette"></p></div></div><ul><li>Palettes</li></ul></section></section>
+    <section data-settings-scroll aria-label="Accessibility"><section data-section-id="accessibility-keyboard-shortcuts-toggle"><div data-settings-row><div><h3 id="shortcut"></h3><p>Sets Copilot to Interactive, Plan, or Autopilot. Requires Use keyboard shortcuts enabled.</p></div></div></section></section>
+    <section data-settings-scroll aria-label="Voice dictation"><section data-section-id="voice-mode-input-device"><div><h2>Input device</h2><p>Choose which microphone Voice dictation should use when recording.</p></div><button>Personal microphone</button></section></section>
+    <section data-settings-scroll aria-label="Computer Use"><p>Computer Use lets Copilot interact with desktop apps by clicking controls, entering text, and using visual context.</p><section data-section-id="computer-use-general"></section></section>
+  </div></div></body>`);
+  const { document } = dom.window;
+  function pieces(id, items) {
+    const root = document.getElementById(id);
+    for (const [tag, text] of items) {
+      if (!tag) root.append(document.createTextNode(text));
+      else {
+        const element = document.createElement(tag);
+        element.textContent = text;
+        root.append(element);
+      }
+    }
+  }
+  pieces("permissions", [[null, "Choose when new local sessions ask before running tools. Once a session has started,"], [null, " "],
+    ["code", "/permissions manual|assisted|allow-all"], [null, " "],
+    [null, "sets a session-specific override. Managed settings can restrict modes or set a different starting mode without changing this saved preference."]]);
+  pieces("commit", [[null, "Include a "], ["code", "Co-authored-by"], [null, " "],
+    [null, "trailer in commit messages written by Copilot."]]);
+  pieces("branch", [[null, "Prefix added to generated branch names. Use"], [null, " "],
+    ["code", "%username%"], [null, " "], [null, "for your GitHub login."]]);
+  pieces("worktree", [[null, "Store new worktrees under the"], [null, " "]]);
+  const link = document.createElement("button");
+  const linkContent = document.createElement("span");
+  linkContent.setAttribute("data-component", "content");
+  const linkText = document.createElement("span");
+  linkText.setAttribute("data-component", "label");
+  linkText.textContent = "global storage location";
+  linkContent.append(linkText);
+  link.append(linkContent);
+  document.getElementById("worktree").append(link, document.createTextNode("."));
+  pieces("palette", [[null, "Configure additional options in "], ["button", "Accessibility"], [null, "."]]);
+  const shortcut = document.getElementById("shortcut");
+  shortcut.append(document.createTextNode("Cycle agent modes with"), document.createTextNode(" "));
+  const glyphs = document.createElement("span");
+  for (const text of ["⇧", "⇥"]) {
+    const kbd = document.createElement("kbd");
+    kbd.textContent = text;
+    glyphs.append(kbd);
+  }
+  const label = document.createElement("span");
+  label.textContent = "Shift + Tab";
+  shortcut.append(glyphs, label);
+  return { dom, document };
+}
+
+test("translates observed fixed settings while preserving code, shortcuts and personal data", async () => {
+  const { dom, document } = fixture();
+  const button = document.querySelector("#worktree button");
+  let clicked = false;
+  button.addEventListener("click", () => { clicked = true; });
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => document.getElementById("shortcut").textContent.includes("循环切换代理模式") &&
+    document.querySelector('[aria-label="Computer Use"] > p').textContent.startsWith("计算机使用功能允许"));
+  assert.equal(document.querySelector('[data-section-id="sessions-default-model"] h2').textContent, "新会话的默认模型");
+  assert.equal(document.querySelector('[data-section-id="sessions-default-model"] p').textContent, "选择新会话使用任意会话最近选择的模型，还是首选模型。");
+  assert.equal(document.querySelector('[data-section-id="sessions-default-model"] button').textContent, "Personal model");
+  assert.equal(document.querySelector('[data-section-id="sessions-instructions"] h2').textContent, "指令");
+  assert.equal(document.querySelector('[data-section-id="sessions-instructions"] h2 + p').textContent, "适用于所有仓库中每个会话的偏好设置。Copilot 也可能从此计算机上的文件加载指令。");
+  assert.deepEqual([...document.querySelectorAll('[data-section-id="sessions-instructions"] h3 + p')].map(e => e.textContent),
+    ["由此应用存储并添加到新会话的可编辑指令。", "这些文件由 Copilot 运行时发现，并在启用时应用。如需修改，请编辑源文件。"]);
+  assert.equal(document.querySelector('[data-section-id="sessions-instructions"] textarea').value, "App instructions");
+  assert.equal(document.querySelector('[data-section-id="sessions-instructions"] li h3').textContent, "App instructions");
+  assert.equal(document.querySelector('[data-section-id="sessions-instructions"] div div div p').textContent, "未找到基于文件的指令。");
+  assert.equal(document.getElementById("permissions").querySelector("code").textContent, "/permissions manual|assisted|allow-all");
+  assert.match(document.getElementById("permissions").textContent, /^选择新本地会话/);
+  assert.equal(document.getElementById("commit").querySelector("code").textContent, "Co-authored-by");
+  assert.equal(document.getElementById("commit").textContent, "在 Copilot 编写的提交消息中包含 Co-authored-by 署名。");
+  assert.equal(document.getElementById("branch").querySelector("code").textContent, "%username%");
+  assert.equal(document.getElementById("branch").textContent, "添加到生成分支名称的前缀。使用 %username% 表示你的 GitHub 登录名。");
+  assert.equal(document.querySelector('[data-section-id="sessions-branch-prefix"] input').value, "fictional-user");
+  assert.equal(document.querySelector('[data-section-id="sessions-worktree-location"] > p').textContent, "Example: C:\\fictional\\path");
+  assert.equal(button.textContent, "全局存储位置");
+  assert.equal(document.getElementById("worktree").textContent, "将新工作树存储在 全局存储位置下。");
+  button.click();
+  assert.equal(clicked, true);
+  assert.equal(document.getElementById("palette").textContent, "在辅助功能中配置更多选项。");
+  assert.equal(document.querySelector('[data-section-id="themes-palette"] li').textContent, "Palettes");
+  assert.deepEqual([...document.querySelectorAll("#shortcut kbd")].map(e => e.textContent), ["⇧", "⇥"]);
+  assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] h2').textContent, "输入设备");
+  assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] p').textContent, "选择语音听写录音时使用的麦克风。");
+  assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] button').textContent, "Personal microphone");
+  assert.match(document.querySelector('[aria-label="Computer Use"] > p').textContent, /^计算机使用功能允许/);
+  overlay.stop();
+  assert.equal(button.textContent, "global storage location");
+  assert.equal(document.getElementById("branch").querySelector("code").textContent, "%username%");
+  dom.window.close();
+});
+
+test("reordered split content is restored without undoing host structural changes", async () => {
+  const { dom, document } = fixture();
+  const overlay = startSettingsTranslation(document, dictionary);
+  const root = document.getElementById("worktree");
+  const button = root.querySelector("button");
+  await waitFor(() => button.textContent === "全局存储位置");
+  root.append(root.firstChild);
+  await waitFor(() => button.textContent === "global storage location");
+  assert.equal(root.lastChild.nodeValue, "Store new worktrees under the");
+  overlay.stop();
+  dom.window.close();
+});
+
+test("worktree link translation requires the observed component ownership", async () => {
+  const { dom, document } = fixture();
+  const label = document.querySelector('#worktree [data-component="label"]');
+  label.setAttribute("data-component", "other");
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => document.getElementById("shortcut").textContent.includes("循环切换代理模式"));
+  assert.equal(document.getElementById("worktree").textContent,
+    "Store new worktrees under the global storage location.");
+  assert.equal(label.textContent, "global storage location");
+  overlay.stop();
+  dom.window.close();
+});
+
+test("a host update to protected code restores the surrounding sentence", async () => {
+  const { dom, document } = fixture();
+  const overlay = startSettingsTranslation(document, dictionary);
+  const root = document.getElementById("branch");
+  await waitFor(() => root.textContent.startsWith("添加到生成分支名称"));
+  root.querySelector("code").textContent = "%changed%";
+  await waitFor(() => root.textContent.startsWith("Prefix added to generated branch names."));
+  assert.equal(root.querySelector("code").textContent, "%changed%");
+  overlay.stop();
+  dom.window.close();
+});
+
+test("newly activated settings panes are translated and restored when hidden", async () => {
+  const dom = new JSDOM(`<body><div id="portal-root"><div role="dialog" data-settings-dialog-root>
+    <section data-settings-scroll><section data-section-id="voice-mode-models"><div><h2>Transcription models</h2><p>Choose an English-only or multilingual model for private, on-device transcription.</p></div></section></section>
+  </div></div></body>`);
+  const { document } = dom.window;
+  const pane = document.querySelector("[data-settings-scroll]");
+  const title = pane.querySelector("h2");
+  const overlay = startSettingsTranslation(document, dictionary);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(title.textContent, "Transcription models");
+  pane.setAttribute("aria-label", "Voice dictation");
+  await waitFor(() => title.textContent === "转录模型");
+  pane.removeAttribute("aria-label");
+  await waitFor(() => title.textContent === "Transcription models");
+  pane.setAttribute("aria-label", "Voice dictation");
+  await waitFor(() => title.textContent === "转录模型");
+  overlay.stop();
+  dom.window.close();
+});
