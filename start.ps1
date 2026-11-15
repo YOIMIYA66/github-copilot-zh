@@ -1,8 +1,18 @@
 param(
-    [string] $AppPath = (Join-Path $env:LOCALAPPDATA 'Programs\GitHub Copilot\github.exe')
+    [string] $AppPath = (Join-Path $env:LOCALAPPDATA 'Programs\GitHub Copilot\github.exe'),
+    [switch] $NoPauseOnError
 )
 
 $ErrorActionPreference = 'Stop'
+trap {
+    Write-Host "Launcher failed: $($_.Exception.Message)" -ForegroundColor Red
+    if (-not $NoPauseOnError) {
+        Write-Host 'Press Enter to close.'
+        Read-Host 'Press Enter to close' | Out-Null
+    }
+    exit 1
+}
+
 if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7 or later is required.' }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { throw 'Node.js 22 or later is required.' }
 $major = & node -p 'Number(process.versions.node.split(".")[0])'

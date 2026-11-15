@@ -89,6 +89,7 @@ Set-Location .\github-copilot-zh
 ```
 
 - **Double-click**: You can also double-click `start.cmd` in the repository folder. On failure, its window stays open so you can read the error; press any key to close it.
+- **Run the script directly**: When `.\start.ps1` is run from an interactive PowerShell, failures are shown and wait for Enter. `start.cmd` handles the pause itself to avoid prompting twice.
 - **Administrator access**: The launcher does not request UAC elevation. Elevation does not resolve an already-running Copilot process; save your work and exit Copilot normally first.
 - **Custom Installation Path**: The default executable is under `%LOCALAPPDATA%\Programs\GitHub Copilot\github.exe`. For another installation location, pass the actual executable path with `-AppPath`:
   ```powershell

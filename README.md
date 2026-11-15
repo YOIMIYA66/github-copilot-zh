@@ -89,6 +89,7 @@ Set-Location .\github-copilot-zh
 ```
 
 - **双击启动**：也可以在资源管理器中双击仓库目录的 `start.cmd`。如启动失败，窗口会保留错误提示；阅读提示后按任意键关闭。
+- **直接运行脚本**：如果从交互式 PowerShell 直接运行 `.\start.ps1`，启动失败时会显示错误并等待按 Enter；`start.cmd` 会自行保留错误窗口，避免重复暂停。
 - **管理员权限**：启动器不会主动请求 UAC 提权。已有 Copilot 正在运行时，提权也不能解决问题；请先保存工作并正常退出 Copilot。
 - **自定义安装路径**：默认可执行文件路径为 `%LOCALAPPDATA%\Programs\GitHub Copilot\github.exe`。若安装在其他位置，请通过 `-AppPath` 传入实际路径：
   ```powershell
