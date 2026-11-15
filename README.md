@@ -85,9 +85,11 @@
 git clone https://github.com/YOIMIYA66/github-copilot-zh.git
 Set-Location .\github-copilot-zh
 # 执行启动器前请先审阅下载的源代码与许可证 (LICENSE)
-pwsh -NoProfile -File .\start.ps1
+.\start.cmd
 ```
 
+- **双击启动**：也可以在资源管理器中双击仓库目录的 `start.cmd`。如启动失败，窗口会保留错误提示；阅读提示后按任意键关闭。
+- **管理员权限**：启动器不会主动请求 UAC 提权。已有 Copilot 正在运行时，提权也不能解决问题；请先保存工作并正常退出 Copilot。
 - **自定义安装路径**：默认可执行文件路径为 `%LOCALAPPDATA%\Programs\GitHub Copilot\github.exe`。若安装在其他位置，请通过 `-AppPath` 传入实际路径：
   ```powershell
   pwsh -NoProfile -File .\start.ps1 -AppPath "D:\CustomPath\GitHub Copilot\github.exe"
@@ -135,29 +137,19 @@ https://github.com/YOIMIYA66/github-copilot-zh。
 
 ## 🔍 工作原理与项目结构
 
-### 系统架构
+### 系统架构与运行流程
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="docs/images/architecture-light.png">
-    <img alt="GitHub Copilot for Windows 汉化补丁系统架构图" src="docs/images/architecture-light.png" width="100%">
+    <img alt="GitHub Copilot for Windows 汉化补丁系统架构与运行流程图" src="docs/images/architecture-light.png" width="100%">
   </picture>
 </p>
 
 <p align="center">
   <sub>💡 提示：可直接在浏览器中打开 <a href="docs/architecture.html"><b>docs/architecture.html</b></a> 体验完整交互式架构图（支持多端视口缩放、主题切换、连线动效与源代码精准定位）。</sub>
 </p>
-
-### 运行流程
-
-```mermaid
-flowchart LR
-    A["1. 预检与签名校验<br/>(start.ps1)"] --> B["2. 回环端口启动应用<br/>(127.0.0.1 调试端口)"]
-    B --> C["3. 进程树与目标双重校验<br/>(verify-listener.ps1 + cdp.js)"]
-    C --> D["4. 注入白名单汉化层<br/>(overlay.js + dictionary.js)"]
-    D -. "Ctrl+C / 停止" .-> E["5. 注销脚本并无损还原<br/>(removeInjection)"]
-```
 
 1. **环境与签名预检（`start.ps1`）**：检查 PowerShell 7+ 与 Node.js 22+，校验 `github.exe` 的 `GitHub, Inc.` 数字签名，确认当前无运行中的 `github.exe` 进程。
 2. **回环调试端口启动（`start.ps1`）**：分配本地空闲端口，通过临时环境变量 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 仅在 `127.0.0.1` 回环地址上启用 WebView2 远程调试并启动应用。
@@ -168,6 +160,7 @@ flowchart LR
 
 ```text
 github-copilot-zh/
+├── start.cmd                # 双击启动入口（失败时保留错误信息）
 ├── start.ps1                # PowerShell 启动器（环境检查、签名校验、分配回环调试端口并启动应用）
 ├── docs/                    # 项目文档与系统架构导出（交互式 HTML 与高分辨率架构图）
 ├── src/
@@ -184,6 +177,7 @@ github-copilot-zh/
     ├── cdp.test.js          # CDP 协议与目标筛选单元测试
     ├── chrome.test.js       # 主界面固定控件与弹出菜单汉化单元测试
     ├── injection.test.js    # 脚本注入、Origin 限制与诊断模式单元测试
+    ├── launcher.test.js     # Windows 双击入口与失败提示测试
     ├── overlay.test.js      # 设置界面翻译、动态更新与还原单元测试
     └── settings-pages.test.js # 各设置分页结构覆盖单元测试
 ```

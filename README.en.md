@@ -85,9 +85,11 @@ This project translates selected fixed **Settings** text and verified static des
 git clone https://github.com/YOIMIYA66/github-copilot-zh.git
 Set-Location .\github-copilot-zh
 # Review the downloaded source and license before executing the launcher.
-pwsh -NoProfile -File .\start.ps1
+.\start.cmd
 ```
 
+- **Double-click**: You can also double-click `start.cmd` in the repository folder. On failure, its window stays open so you can read the error; press any key to close it.
+- **Administrator access**: The launcher does not request UAC elevation. Elevation does not resolve an already-running Copilot process; save your work and exit Copilot normally first.
 - **Custom Installation Path**: The default executable is under `%LOCALAPPDATA%\Programs\GitHub Copilot\github.exe`. For another installation location, pass the actual executable path with `-AppPath`:
   ```powershell
   pwsh -NoProfile -File .\start.ps1 -AppPath "D:\CustomPath\GitHub Copilot\github.exe"
@@ -145,29 +147,19 @@ uncertainty and explain how to stop and restore the app.
 
 ## 🔍 How It Works & Project Structure
 
-### System Architecture
+### System Architecture & Lifecycle
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="docs/images/architecture-light.png">
-    <img alt="GitHub Copilot for Windows Localization Architecture" src="docs/images/architecture-light.png" width="100%">
+    <img alt="GitHub Copilot for Windows Localization Architecture & Lifecycle" src="docs/images/architecture-light.png" width="100%">
   </picture>
 </p>
 
 <p align="center">
   <sub>💡 Tip: Open <a href="docs/architecture.html"><b>docs/architecture.html</b></a> directly in your browser for the full interactive diagram (viewport zoom, theme toggle, trace animations, and exact source code references).</sub>
 </p>
-
-### Lifecycle
-
-```mermaid
-flowchart LR
-    A["1. Pre-flight & Signature<br/>(start.ps1)"] --> B["2. Loopback Debug Launch<br/>(127.0.0.1 Port)"]
-    B --> C["3. Dual Process & Origin Check<br/>(verify-listener.ps1 + cdp.js)"]
-    C --> D["4. Scoped Overlay Injection<br/>(overlay.js + dictionary.js)"]
-    D -. "Ctrl+C / Stop" .-> E["5. Deregister & Restore<br/>(removeInjection)"]
-```
 
 1. **Pre-flight & Signature Check (`start.ps1`)**: Verifies PowerShell 7+ and Node.js 22+, checks the `GitHub, Inc.` Authenticode signature on `github.exe`, and ensures no `github.exe` instance is already running.
 2. **Loopback Debug Launch (`start.ps1`)**: Allocates an ephemeral loopback port and launches `github.exe` with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` bound strictly to `127.0.0.1`.
@@ -178,6 +170,7 @@ flowchart LR
 
 ```text
 github-copilot-zh/
+├── start.cmd                # Double-click entry point (keeps error messages visible)
 ├── start.ps1                # PowerShell launcher (checks prerequisites, verifies signature, starts app)
 ├── docs/                    # Project documentation & architecture exports (interactive HTML & HiDPI diagrams)
 ├── src/
@@ -194,6 +187,7 @@ github-copilot-zh/
     ├── cdp.test.js          # Unit tests for CDP client and target selection
     ├── chrome.test.js       # Unit tests for static main-window UI and verified menus
     ├── injection.test.js    # Unit tests for script injection, origin checks, and diagnostics
+    ├── launcher.test.js     # Tests for the Windows double-click entry point and failures
     ├── overlay.test.js      # Unit tests for Settings translation, dynamic mutations, and restoration
     └── settings-pages.test.js # Unit tests for Settings page structural coverage
 ```
