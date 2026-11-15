@@ -206,7 +206,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [role=menuitemradio] > span:first-child")].map(node => node.textContent),
     ["始终询问", "辅助模式", "全部允许"]);
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [data-menu-description]")].map(node => node.textContent),
-    ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
+    ["运行工具前询问。", "使用 AI 减少审批提示。", "运行工具前不再询问。"]);
   assert.equal(document.querySelector("#model-details-generated p:last-child").textContent, "15% discount until Nov 15");
   const discount = document.querySelector("#model-details-generated p:last-child");
   discount.firstChild.nodeValue = "20.5% discount until Nov 16";
@@ -273,7 +273,7 @@ test("closes and restores a chrome menu when its dynamic trigger ownership ends"
   dom.window.close();
 });
 
-test("permission titles are Chinese while native descriptions and selection remain unchanged", async () => {
+test("permission titles and fixed descriptions translate while selection and host updates remain unchanged", async () => {
   const { dom, document } = fixture();
   const popup = document.getElementById("permissions-popup-generated");
   const items = [...popup.querySelectorAll('[role="menuitemradio"]')];
@@ -283,11 +283,12 @@ test("permission titles are Chinese while native descriptions and selection rema
   </div>`;
   const overlay = startSettingsTranslation(document, dictionary);
   await waitFor(() => items[2].firstElementChild.textContent === "全部允许" &&
+    items[2].lastElementChild.textContent === "运行工具前不再询问。" &&
     document.querySelector('[data-section-id="sessions-auto-approve"] button').textContent === "辅助审批");
   assert.deepEqual(items.map(item => item.firstElementChild.textContent), ["始终询问", "辅助模式", "全部允许"]);
   assert.deepEqual(items.map(item => item.getAttribute("aria-checked")), ["false", "true", "false"]);
   assert.deepEqual(items.map(item => item.lastElementChild.textContent),
-    ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
+    ["运行工具前询问。", "使用 AI 减少审批提示。", "运行工具前不再询问。"]);
   items[1].lastElementChild.firstChild.nodeValue = "Assisted";
   items[1].firstElementChild.firstChild.nodeValue = "Always ask";
   await waitFor(() => items[1].firstElementChild.textContent === "始终询问");
@@ -302,6 +303,52 @@ test("permission titles are Chinese while native descriptions and selection rema
   assert.deepEqual(items.map(item => item.firstElementChild.textContent), ["Always ask", "Always ask", "Approve all"]);
   assert.equal(items[1].lastElementChild.textContent, "Assisted");
   assert.deepEqual(items.map(item => item.getAttribute("aria-checked")), ["false", "true", "false"]);
+  dom.window.close();
+});
+
+test("verified model switch labels and updated details translate without renaming tiers or changing state", async () => {
+  const { dom, document } = fixture();
+  const popup = document.getElementById("model-popup-generated");
+  const row = document.createElement("div");
+  row.setAttribute("role", "menuitem");
+  row.innerHTML = '<button role="switch" aria-checked="true"><span>On</span></button><span data-user-content>On</span>';
+  popup.append(row);
+  const description = document.querySelector("#model-details-generated p");
+  const english = "Prioritizes the most capable models for the most demanding tasks and complex reasoning.";
+  description.textContent = english;
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => row.querySelector("button span").textContent === "开启" && description.textContent === dictionary[english]);
+  assert.deepEqual([...popup.querySelectorAll("[data-auto-tier-id]")].map(node => node.textContent), ["Standard", "High", "Max"]);
+  assert.equal(row.querySelector("[data-user-content]").textContent, "On");
+  row.querySelector("button").setAttribute("aria-checked", "false");
+  row.querySelector("button span").firstChild.nodeValue = "Off";
+  await waitFor(() => row.querySelector("button span").textContent === "关闭");
+  assert.equal(row.querySelector("button").getAttribute("aria-checked"), "false");
+  overlay.stop();
+  assert.equal(description.textContent, english);
+  assert.equal(row.querySelector("button span").textContent, "Off");
+  dom.window.close();
+});
+
+test("owned Settings composers do not require chat-only keyboard hints or generated mode-heading IDs", async () => {
+  const { dom, document } = fixture();
+  const footer = document.querySelector("[data-rich-composer-footer]");
+  document.getElementById("portal-root").innerHTML = '<div role="dialog" data-settings-dialog-root></div>';
+  document.querySelector("[data-settings-dialog-root]").append(footer);
+  document.getElementById("mode-trigger-generated").setAttribute("aria-label", "Mode: Interactive");
+  document.getElementById("model-trigger-generated").setAttribute("aria-label", "Copilot Fusion · Standard, model and reasoning");
+  const title = document.getElementById("mode-title-generated");
+  title.removeAttribute("id");
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => title.textContent === "模式" &&
+    document.querySelector("#model-popup-generated [role=none] div").textContent === "推理强度" &&
+    document.querySelector("#permissions-popup-generated [data-menu-description]").textContent === "运行工具前询问。");
+  assert.deepEqual([...document.querySelectorAll("#mode-popup-generated [role=menuitemradio] > span:first-child")].map(node => node.textContent),
+    ["Interactive", "Plan", "Autopilot"]);
+  footer.removeAttribute("data-rich-composer-footer");
+  await waitFor(() => title.textContent === "Mode");
+  assert.equal(document.querySelector("#model-popup-generated [role=none] div").textContent, "Effort level");
+  overlay.stop();
   dom.window.close();
 });
 
@@ -507,12 +554,13 @@ test("submenu ownership ignores semantic hidden mirrors and shortcuts, not dupli
   modeTitle.innerHTML = '<span aria-hidden="true">Mode</span><span>Mode</span>';
   const overlay = startSettingsTranslation(document, dictionary);
   await waitFor(() => document.querySelector("#theme-popup-generated [role=menuitemradio] span").textContent === "系统" &&
-    document.querySelector("#permissions-popup-generated [role=menuitemradio]:last-child span").textContent === "全部允许");
+    document.querySelector("#permissions-popup-generated [role=menuitemradio]:last-child span").textContent === "全部允许" &&
+    document.querySelector("#permissions-popup-generated [role=menuitemradio]:last-child [data-menu-description]").textContent === "运行工具前不再询问。");
   assert.equal(theme.querySelector("kbd").textContent, "Ctrl+T");
   assert.equal(permissions.querySelector('span:not([aria-hidden])').textContent, "工具权限");
   assert.equal(modeTitle.querySelector('span:not([aria-hidden])').textContent, "模式");
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [data-menu-description]")].map(node => node.textContent),
-    ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
+    ["运行工具前询问。", "使用 AI 减少审批提示。", "运行工具前不再询问。"]);
   permissions.innerHTML = "<span>Tool permissions</span><span>Tool permissions</span>";
   await waitFor(() => document.querySelector("#permissions-popup-generated [role=menuitemradio] span").textContent === "Always ask");
   overlay.stop();

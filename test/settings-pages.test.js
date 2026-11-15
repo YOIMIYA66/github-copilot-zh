@@ -201,6 +201,49 @@ test("reordered split content is restored without undoing host structural change
   dom.window.close();
 });
 
+test("activity list subsettings require their heading and exact keys, not synthetic settings-row markup", async () => {
+  const keys = ["reasoning", "tool-calls", "code-search", "reading-files", "creating-files", "editing-files",
+    "cli-commands", "cli-exit", "model-change", "compaction"];
+  const labels = ["Reasoning", "Tool calls", "Code search", "Reading files", "Creating files", "Editing files",
+    "Running CLI commands", "CLI commands finish running", "Changing models and agents", "Compacting the conversation"];
+  const shortcuts = ["Go back", "Go forward", "Previous session", "Next session", "Previous region", "Next region",
+    "Toggle sidebar", "Go to selection actions", "Collapse or expand thinking", "Expand tables", "Previous artifact", "Next artifact"];
+  const dom = new JSDOM(`<body><main><p>Reasoning · Collapse or expand thinking · Thinking</p></main><div id="portal-root">
+    <div role="dialog" data-settings-dialog-root><section data-settings-scroll="true">
+      <section data-section-id="accessibility-announcements"><div><h2 id="fictional-activities">Session activity announcements</h2>
+        <p>Set what types of Copilot activity are announced.</p></div><div><ul role="list" aria-labelledby="fictional-activities">
+        ${keys.map((key, index) => `<li data-subsetting-id="${key}"><div>${labels[index]}</div>
+          <button role="switch" aria-checked="true"><span class="sr-only">On</span></button></li>`).join("")}</ul></div>
+        <ul role="list" aria-labelledby="fictional-unrelated"><li data-subsetting-id="reasoning"><div>Reasoning</div></li></ul>
+      </section></section><section data-settings-scroll aria-label="Accessibility"><section data-section-id="accessibility-keyboard">
+        ${shortcuts.map(label => `<div><span>${label}</span><kbd>Ctrl+F6</kbd></div>`).join("")}
+        <div data-user-content><span>Go back</span></div>
+      </section></section><h2 id="fictional-unrelated">Fictional heading</h2></div></div></body>`);
+  const { document } = dom.window;
+  const overlay = startSettingsTranslation(document, dictionary);
+  const list = document.querySelector('[aria-labelledby="fictional-activities"]');
+  await waitFor(() => list.lastElementChild.firstElementChild.textContent === "压缩对话上下文" &&
+    document.querySelector('[data-section-id="accessibility-keyboard"] div:last-of-type').textContent === "Go back");
+  assert.deepEqual([...list.querySelectorAll("li > div")].map(node => node.textContent), labels.map(label => dictionary[label]));
+  assert.ok([...list.querySelectorAll(".sr-only")].every(node => node.textContent === "开启"));
+  assert.ok([...list.querySelectorAll("[role=switch]")].every(node => node.getAttribute("aria-checked") === "true"));
+  assert.equal(document.querySelector('[aria-labelledby="fictional-unrelated"] li').textContent, "Reasoning");
+  const keyboard = document.querySelector('[data-section-id="accessibility-keyboard"]');
+  await waitFor(() => keyboard.children[11].querySelector("span").textContent === "下一个产物");
+  assert.deepEqual([...keyboard.querySelectorAll(":scope > div:not([data-user-content]) > span")].map(node => node.textContent),
+    shortcuts.map(label => dictionary[label]));
+  assert.ok([...keyboard.querySelectorAll("kbd")].every(node => node.textContent === "Ctrl+F6"));
+  keyboard.firstElementChild.querySelector("span").firstChild.nodeValue = "On";
+  list.firstElementChild.setAttribute("data-subsetting-id", "unverified-subsetting");
+  await waitFor(() => list.firstElementChild.firstElementChild.textContent === "Reasoning");
+  assert.equal(list.firstElementChild.querySelector(".sr-only").textContent, "On");
+  assert.equal(keyboard.firstElementChild.querySelector("span").textContent, "On");
+  assert.equal(document.querySelector("main p").textContent, "Reasoning · Collapse or expand thinking · Thinking");
+  overlay.stop();
+  assert.equal(list.lastElementChild.firstElementChild.textContent, "Compacting the conversation");
+  dom.window.close();
+});
+
 test("worktree link translation requires the observed component ownership", async () => {
   const { dom, document } = fixture();
   const label = document.querySelector('#worktree [data-component="label"]');

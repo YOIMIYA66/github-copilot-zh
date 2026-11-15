@@ -52,13 +52,25 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     sidebarTheme: ["System", "Light", "Dark", "Open themes settings"],
     composerMode: ["Mode", "Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption", "Tool permissions", "Approve all"],
-    composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted"],
-    composerModel: ["Effort level", "Learn more",
-      "Prioritizes capable models for challenging tasks and deeper reasoning."],
-    composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"]
+    composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted",
+      "Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."],
+    composerModel: ["Effort level", "Learn more", "On", "Off",
+      "Prioritizes capable models for challenging tasks and deeper reasoning.",
+      "Prioritizes the most capable models for the most demanding tasks and complex reasoning."],
+    composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"],
+    customizeAdd: ["MCP Server…", "Plugin…", "Skill", "Canvas from URL…", "Manage marketplaces…"]
   };
   const accountActionWords = ["Update authorization", "Manage plan", "Remove account", "Set as default"];
   const permissionTitles = { Assisted: "辅助模式", "Approve all": "全部允许" };
+  const activityLabels = {
+    reasoning: "Reasoning", "tool-calls": "Tool calls", "code-search": "Code search",
+    "reading-files": "Reading files", "creating-files": "Creating files", "editing-files": "Editing files",
+    "cli-commands": "Running CLI commands", "cli-exit": "CLI commands finish running",
+    "model-change": "Changing models and agents", compaction: "Compacting the conversation"
+  };
+  const shortcutLabels = ["Go back", "Go forward", "Previous session", "Next session",
+    "Previous region", "Next region", "Toggle sidebar", "Go to selection actions",
+    "Collapse or expand thinking", "Expand tables", "Previous artifact", "Next artifact"];
   const sidebarNavigationSelector = '[data-sidebar-live-width] > div > [data-testid="sidebar-scroll-viewport"] > div > nav';
   const sidebarBoundarySelectors = [
     "[data-sidebar-live-width]", "[data-sidebar-live-width] > div",
@@ -81,13 +93,60 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const themeSectionIds = new Set(["general-theme", "themes-mode", "themes-terminal"]);
   const chromeRoots = new Set();
   const chromeRootObservers = new Map();
-  const mainRoot = document.querySelector("main[data-app-shell-main][data-f6-nav]");
+  const mainRoot = document.querySelector("main[data-app-shell-main]");
+  const factory = '[data-factory-proposal-host="true"]';
+  const factoryHeader = `${factory} header [data-customize-category-header-row]`;
+  const setup = `${factory} [role="tabpanel"] main > div > div > div[data-size="medium"]`;
+  const customizeHeader = 'header[data-content-leading-inset][data-f6-nav] [data-customize-category-header-row]';
+  const pageRules = [
+    { selector: '[data-testid="my-work-inbox-view"] > [data-testid="my-work-list-pane"] > header[data-content-leading-inset][data-tauri-drag-region][data-f6-nav] > div > div > h1',
+      words: ["Pull requests", "Issues"] },
+    { selector: `${factory} header:has([data-customize-category-header-row]) h1`, words: ["Automations"] },
+    { selector: `${factoryHeader} [data-customize-category-drag-region] [data-tab-row-scroller] > [role="tablist"]`,
+      words: ["Personal", "Shared", "Dreaming"] },
+    { selector: `${factoryHeader} button[data-new-automation-action][data-size="small"]`,
+      words: ["New automation"] },
+    { selector: `${factoryHeader} [role="search"] input[data-size="small"]`,
+      attribute: "placeholder", words: ["Search personal automations…"] },
+    { selector: `${setup} > div > div:nth-child(2)`,
+      words: ["Set up automations",
+        "Use agents to handle recurring work on a cadence you choose or triggered by events. You can start from scratch or turn an existing agent skill into an automation."],
+      setup: true },
+    { selector: `${setup} [data-prompt-composer-v2][data-command-context="prompt-composer"] [data-rc-consumer="prompt-composer"] [role="textbox"][contenteditable="true"][data-lexical-editor="true"]`,
+      attribute: "data-placeholder", words: ["Describe what this automation should do. Type / for skills…"], setup: true },
+    { selector: `${setup} button[data-base-ui-tooltip-trigger][aria-describedby]`,
+      words: ["Chat"], setup: true },
+    { selector: `${customizeHeader} [data-customize-category-drag-region] [data-customize-category-tabs-root="true"]`,
+      words: ["Browse", "Installed"] },
+    { selector: `${customizeHeader} button[data-testid="extensions-add-menu-trigger"][aria-haspopup="menu"]`,
+      words: ["Add"], kind: "customizeAdd" },
+    { selector: '[role="tabpanel"] [role="search"] button[data-testid="customize-type-filter-trigger"][aria-haspopup="menu"]',
+      words: ["All types"], customize: true },
+    { selector: '[role="tabpanel"] [role="search"]:has(button[data-testid="customize-type-filter-trigger"]) input[data-size="large"]',
+      attribute: "placeholder", words: ["Search MCP servers, plugins, skills and more…"], customize: true },
+    { selector: 'section[aria-labelledby="featured-editors-picks-heading"] h2[id="featured-editors-picks-heading"]',
+      words: ["Editor’s picks"], customize: true },
+    { selector: 'section[aria-labelledby="featured-editors-picks-heading"] div:has(> h2[id="featured-editors-picks-heading"]) > p',
+      words: ["Standout ways to customize Copilot."], customize: true },
+    { selector: 'section[aria-labelledby="featured-editors-picks-heading"] ul[role="list"][aria-labelledby="featured-editors-picks-heading"] > li[data-carousel-card] button[data-variant="invisible"][data-size="small"]',
+      words: ["Add canvas"], customize: true, cardAction: true }
+  ];
+  const pageControls = new Map();
+  const pageBoundaryObservers = new Map();
+  const pageRouteBoundaries = new Set();
+  const pageOwnerAttributes = ["role", "id", "aria-labelledby", "aria-describedby", "aria-haspopup",
+    "data-size", "data-variant", "data-testid", "contenteditable", "data-user-content",
+    "data-factory-proposal-host", "data-customize-category-tabs-root", "data-customize-category-header-row",
+    "data-customize-category-drag-region", "data-tab-row-scroller", "data-new-automation-action",
+    "data-content-leading-inset", "data-f6-nav", "data-tauri-drag-region",
+    "data-command-context", "data-rc-consumer", "data-lexical-editor", "data-prompt-composer-v2",
+    "data-rich-composer-footer"];
   const chromeObserverOptions = {
     subtree: true, childList: true, characterData: true, attributes: true,
     attributeFilter: ["aria-expanded", "aria-controls", "aria-haspopup", "aria-labelledby", "aria-label",
-      "id", "role", "data-testid", "data-open", "data-rootownerid",
-      "data-sidebar-nav-item", "data-command", "data-sidebar-file-drop-kind",
-      "data-user-content", "contenteditable"]
+      "id", "role", "data-testid", "data-open", "data-rootownerid", "aria-describedby",
+      "data-sidebar-nav-item", "data-command", "data-sidebar-file-drop-kind", "data-selected",
+      "data-user-content", "contenteditable", ...pageOwnerAttributes]
   };
   const splitPatterns = [
     { section: "general-tray-menu", tag: "P", parents: ["P", "P", "P"],
@@ -129,8 +188,11 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function chromeRootFor(element) {
     if (!element) return null;
-    for (const root of chromeRoots) if (root.isConnected && root.contains(element)) return root;
-    return null;
+    let nearest = null;
+    for (const root of chromeRoots) {
+      if (root.isConnected && root.contains(element) && (!nearest || nearest.contains(root))) nearest = root;
+    }
+    return nearest;
   }
 
   function addChromeRoot(root) {
@@ -138,7 +200,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (root.matches(sidebarNavigationSelector)) sidebarNavigationRoots.add(root);
     chromeRoots.add(root);
     const rootObserver = new document.defaultView.MutationObserver(mutations);
-    rootObserver.observe(root, chromeObserverOptions);
+    const rule = pageControls.get(root);
+    rootObserver.observe(root, rule?.attribute ? { attributes: true,
+      attributeFilter: [rule.attribute, ...pageOwnerAttributes] } : chromeObserverOptions);
     chromeRootObservers.set(root, rootObserver);
     scan(root, "chrome");
   }
@@ -150,6 +214,104 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     }
     if (scope.nodeType === 1 && scope.matches("[data-sidebar-live-width]")) discoverSidebarNavigation(scope);
     for (const sidebar of scope.querySelectorAll("[data-sidebar-live-width]")) discoverSidebarNavigation(sidebar);
+    if (scope === document || mainRoot?.contains(scope)) refreshPageControls();
+  }
+
+  function validPageControl(root, rule) {
+    if (!rule || !root.isConnected || !mainRoot?.contains(root) ||
+        root.closest("[data-user-content],[data-testid=workflow-gallery-card]")) return false;
+    if (rule.related) return rule.related.isConnected && validPageControl(rule.related, pageControls.get(rule.related)) &&
+      (rule.related.getAttribute("aria-describedby") || "").split(/\s+/).includes(root.id) &&
+      !root.closest("[contenteditable]");
+    if (!root.matches(rule.selector)) return false;
+    if (rule.setup && !root.closest('[data-size="medium"]')?.querySelector(
+      '[data-prompt-composer-v2][data-command-context="prompt-composer"]')) return false;
+    if (rule.words.length === 1 && rule.words[0] === "Chat") {
+      const shell = root.closest('[data-size="medium"]');
+      if (!(root.getAttribute("aria-describedby") || "").split(/\s+/).some(id => {
+        const label = document.getElementById(id);
+        return label && shell.contains(label) && label.childElementCount === 0 &&
+          ["The agent will help you design your automation in a chat.",
+            dictionary["The agent will help you design your automation in a chat."]].includes(label.textContent.trim());
+      })) return false;
+    }
+    if (rule.customize && !mainRoot.querySelector(
+      `${customizeHeader} [data-customize-category-tabs-root="true"]`)) return false;
+    return true;
+  }
+
+  function refreshPageControls() {
+    if (!mainRoot) return;
+    const boundaries = new Set(pageRouteBoundaries);
+    function rememberRoutePrefix(owner) {
+      if (!owner || owner.closest("[data-user-content]")) return;
+      const path = [];
+      for (let node = owner.parentElement; node && node !== mainRoot; node = node.parentElement) path.unshift(node);
+      // Retain only the UI-observed route prefix, not any page or transcript subtree.
+      if (path.length >= 3 && path.slice(0, 3).every(node => node.tagName === "DIV") &&
+          path[0].parentElement === mainRoot) {
+        for (const node of path.slice(0, 3)) { pageRouteBoundaries.add(node); boundaries.add(node); }
+      }
+    }
+    for (const composer of mainRoot.querySelectorAll('[data-testid="conversation-composer-area"]')) {
+      rememberRoutePrefix(composer);
+    }
+    function register(root, rule) {
+      if (!validPageControl(root, rule)) return;
+      pageControls.set(root, rule);
+      addChromeRoot(root);
+      let parent = root.parentElement;
+      if (rule.cardAction) parent = root.closest("ul[role=list]");
+      for (; parent && parent !== mainRoot; parent = parent.parentElement) {
+        if (!parent.closest("[contenteditable]")) boundaries.add(parent);
+      }
+      const owner = root.closest('[data-factory-proposal-host],[data-testid="my-work-inbox-view"],header[data-content-leading-inset]');
+      rememberRoutePrefix(owner);
+      if (rule.attribute === "data-placeholder") {
+        const id = (root.getAttribute("aria-describedby") || "").split(/\s+/)[0];
+        const label = id && document.getElementById(id);
+        if (label && !root.contains(label) && root.closest('[data-size="medium"]')?.contains(label) &&
+            label.childElementCount === 0 && rule.words.some(word =>
+              label.textContent.trim() === word || label.textContent.trim() === dictionary[word])) {
+          register(label, { words: rule.words, related: root });
+        }
+      }
+      if (rule.words.length === 1 && rule.words[0] === "Chat" &&
+          ["Chat", dictionary.Chat].includes(visibleMenuLabel(root))) {
+        for (const id of (root.getAttribute("aria-describedby") || "").split(/\s+/)) {
+          const label = document.getElementById(id);
+          if (label && root.closest('[data-size="medium"]')?.contains(label) && label.childElementCount === 0 &&
+              ["The agent will help you design your automation in a chat.",
+                dictionary["The agent will help you design your automation in a chat."]].includes(label.textContent.trim())) {
+            register(label, { words: ["The agent will help you design your automation in a chat."], related: root });
+          }
+        }
+      }
+    }
+    for (const rule of pageRules) for (const root of mainRoot.querySelectorAll(rule.selector)) register(root, rule);
+    for (const [root, rule] of pageControls) {
+      if (validPageControl(root, rule)) continue;
+      pageControls.delete(root);
+      chromeRootObservers.get(root)?.disconnect();
+      chromeRootObservers.delete(root);
+      chromeRoots.delete(root);
+      restorePopup(root);
+    }
+    for (const node of boundaries) {
+      if (!node.isConnected || !mainRoot.contains(node) || node === mainRoot) continue;
+      if (!pageBoundaryObservers.has(node)) {
+        const boundary = new document.defaultView.MutationObserver(mutations);
+        boundary.observe(node, { childList: true, attributes: true,
+          attributeFilter: pageOwnerAttributes });
+        pageBoundaryObservers.set(node, boundary);
+      }
+    }
+    for (const [node, boundary] of pageBoundaryObservers) {
+      if (node.isConnected && boundaries.has(node)) continue;
+      boundary.disconnect();
+      pageBoundaryObservers.delete(node);
+      pageRouteBoundaries.delete(node);
+    }
   }
 
   function discoverSidebarNavigation(sidebar) {
@@ -171,8 +333,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   }
 
   function removeDisconnectedChromeRoots() {
+    if (pageControls.size || pageBoundaryObservers.size) refreshPageControls();
     for (const root of chromeRoots) {
-      if (root.isConnected && (!sidebarNavigationRoots.has(root) || root.matches(sidebarNavigationSelector))) continue;
+      const rule = pageControls.get(root);
+      if (root.isConnected && (rule ? validPageControl(root, rule) :
+          chromeRootSelectors.some(selector => root.matches(selector))) &&
+          (!sidebarNavigationRoots.has(root) || root.matches(sidebarNavigationSelector))) continue;
       chromeRootObservers.get(root)?.disconnect();
       chromeRootObservers.delete(root);
       chromeRoots.delete(root);
@@ -192,8 +358,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function composerMenuKind(trigger) {
     if (!trigger.matches('[data-rich-composer-footer] button[aria-haspopup="menu"][id][data-base-ui-tooltip-trigger]')) return false;
     const label = trigger.getAttribute("aria-label") || "";
-    if (/^Mode: (?:Interactive|Plan|Autopilot), Ctrl \+ Shift \+ M$/.test(label)) return "composerMode";
-    if (/^.+, model and reasoning, Ctrl \+ Shift \+ E$/.test(label)) return "composerModel";
+    if (/^Mode: (?:Interactive|Plan|Autopilot)(?:, Ctrl \+ Shift \+ M)?$/.test(label)) return "composerMode";
+    if (/^.+, model and reasoning(?:, Ctrl \+ Shift \+ E)?$/.test(label)) return "composerModel";
     if (label === "Add context & more") return "composerContext";
     return null;
   }
@@ -206,6 +372,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (!trigger || !trigger.id || trigger.getAttribute("aria-expanded") !== "true" ||
         trigger.getAttribute("aria-haspopup") !== "menu") return null;
     if (isSidebarMenuTrigger(trigger)) return "sidebar";
+    const pageRule = pageControls.get(trigger);
+    if (pageRule?.kind === "customizeAdd" && validPageControl(trigger, pageRule)) return "customizeAdd";
     const directKind = composerMenuKind(trigger);
     if (directKind) return directKind;
     const parentMenu = trigger.closest('[role="menu"][id][aria-labelledby]');
@@ -250,23 +418,32 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (owner.kind === "composerPermissions") {
       return owner.words.includes(text) &&
         !!element.closest('[role="menuitemradio"]') &&
-        !element.closest("[data-menu-description]");
+        (!element.closest("[data-menu-description]") ||
+          ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."].includes(text));
     }
     if (owner.kind === "composerModelDetails") {
       return element.tagName === "P" &&
-        text === "Prioritizes capable models for challenging tasks and deeper reasoning.";
+        ["Prioritizes capable models for challenging tasks and deeper reasoning.",
+          "Prioritizes the most capable models for the most demanding tasks and complex reasoning."].includes(text);
+    }
+    if (owner.kind === "composerModel" && ["On", "Off"].includes(text)) {
+      return !!element.closest("button[role=switch],[data-switch-state-label]");
+    }
+    if (owner.kind === "customizeAdd") {
+      const item = element.closest('[role="menuitem"]');
+      const labels = { mcp: "MCP Server…", plugin: "Plugin…", skill: "Skill", canvas: "Canvas from URL…" };
+      return !!item && item.closest('[role="menu"]') === owner.popup &&
+        (Object.entries(labels).some(([key, label]) => text === label &&
+          item.getAttribute("data-testid") === `extensions-add-menu-${key}`) ||
+          (text === "Manage marketplaces…" && !item.hasAttribute("data-testid")));
     }
     if (["Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption"].includes(text)) {
       return owner.kind === "composerMode" && !!element.closest('[role="menuitemradio"] [data-menu-description]');
     }
     if (text === "Mode") {
-      if (owner.kind !== "composerMode") return false;
-      const title = element.closest("[id]");
-      const label = title && visibleMenuLabel(title);
-      return !!title && (label === "Mode" || label === dictionary.Mode) &&
-        [...owner.popup.querySelectorAll('[role="group"][aria-labelledby]')]
-          .some(group => group.getAttribute("aria-labelledby") === title.id);
+      return owner.kind === "composerMode" && element.matches("div,span,h2,h3") &&
+        !element.closest('[role="menuitem"],[role="menuitemradio"],button,a');
     }
     if (text === "Effort level") return owner.kind === "composerModel" && !!element.closest('[role="none"]');
     if (text === "Learn more") return owner.kind === "composerModel" && element.matches("a[href]");
@@ -318,6 +495,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function isChromeText(element, text) {
     const root = chromeRootFor(element);
     if (!root) return false;
+    const pageRule = pageControls.get(root);
+    if (pageRule) return !pageRule.attribute && validPageControl(root, pageRule) && pageRule.words.includes(text);
     if (root.matches(sidebarNavigationSelector)) {
       const button = element.closest("nav > ul > li > button[data-sidebar-nav-item][data-command]");
       if (!button || button.closest("nav") !== root) return false;
@@ -352,11 +531,27 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       fixedSections.has(parts[1]) || Object.hasOwn(actionWords, parts[1]));
   }
 
-  function isFixedRowText(element) {
+  function isFixedRowText(element, text = element.textContent.trim()) {
     const section = element.closest("[data-section-id]");
     if (!section || !fixedSections.has(section.getAttribute("data-section-id"))) return false;
+    if (section.getAttribute("data-section-id") === "accessibility-announcements") {
+      const item = element.closest("li[data-subsetting-id]");
+      const list = item?.parentElement;
+      const heading = list?.getAttribute("aria-labelledby") &&
+        document.getElementById(list.getAttribute("aria-labelledby"));
+      const id = item?.getAttribute("data-subsetting-id");
+      if (Object.hasOwn(activityLabels, id) && list.matches("ul[role=list]") &&
+          heading && section.contains(heading) &&
+          ["Session activity announcements", dictionary["Session activity announcements"]].includes(visibleMenuLabel(heading))) {
+        if (element.parentElement === item && element.matches("div") && text === activityLabels[id]) return true;
+        if (["On", "Off"].includes(text) && element.closest("button[role=switch],[data-switch-state-label]")) return true;
+      }
+      if (item) return false;
+    }
+    if (section.getAttribute("data-section-id") === "accessibility-keyboard" &&
+        shortcutLabels.includes(text) && element.matches("span,div,label")) return true;
     if (themeSectionIds.has(section.getAttribute("data-section-id")) &&
-        ["System", "Light", "Dark"].includes(element.textContent.trim())) {
+        ["System", "Light", "Dark"].includes(text)) {
       const control = element.closest('button,[role="radio"],[role="tab"],[role="option"]');
       const row = element.closest("[data-settings-row]");
       if (control && row && row.contains(control) && section.contains(row)) return true;
@@ -511,10 +706,11 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (!element || !node.isConnected || (dialog && !dialog.isConnected)) return false;
     if (element.closest("input,textarea,select,code,kbd,samp,pre,[contenteditable],[data-user-content]")) return false;
     const scroll = element.closest("[data-settings-scroll]");
-    if (scroll && !scroll.hasAttribute("aria-label")) return false;
+    if (scroll && !scroll.hasAttribute("aria-label") &&
+        !element.closest('[data-section-id="accessibility-announcements"]')) return false;
     const prior = tracked.get(node);
     const text = (prior && node.nodeValue === prior.translated ? prior.original : node.nodeValue).trim();
-    if (dialog?.contains(element) && (isNavLabel(element) || isFixedRowText(element) || isFixedHeader(element) ||
+    if (dialog?.contains(element) && (isNavLabel(element) || isFixedRowText(element, text) || isFixedHeader(element) ||
         isFixedChoice(element, text) || isFixedAction(element, text))) return true;
     if (isChromeText(element, text)) return true;
     const owner = ownedPopup(element);
@@ -622,7 +818,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const locationAction = name === "aria-label" &&
       ["Reset to default location", "Copy path", "Show in Explorer"].includes(original) &&
       element.matches("button") && element.closest('[data-section-id="general-workspace-location"]');
-    const eligible = dialog && dialog.contains(element) && (search || close || locationAction);
+    const pageRule = pageControls.get(element);
+    const eligible = (dialog && dialog.contains(element) && (search || close || locationAction)) ||
+      (pageRule?.attribute === name && validPageControl(element, pageRule) &&
+        pageRule.words.includes(original) && !element.closest("[data-user-content]"));
     if (!eligible) {
       if (prior && current === prior.translated) element.setAttribute(name, prior.original);
       attributes.get(element)?.delete(name);
@@ -658,7 +857,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (node.nodeType !== 1 && node.nodeType !== 3) return;
     if (queued.has(node)) return;
     queued.add(node);
-    queue.push({ node, walker: node.nodeType === 1 ? document.createTreeWalker(node, 5) : null, rootProcessed: false });
+    queue.push({ node, walker: node.nodeType === 1 && !pageControls.get(node)?.attribute
+      ? document.createTreeWalker(node, 5) : null, rootProcessed: false });
     if (timer === null) timer = document.defaultView.setTimeout(drain, 0);
   }
 
@@ -685,11 +885,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       }
       if (!task.rootProcessed) {
         task.rootProcessed = true;
+        const rule = pageControls.get(task.node);
+        if (rule?.attribute) translateAttribute(task.node, rule.attribute);
         if (task.node.matches('input[role="searchbox"],button[aria-label]')) {
           for (const name of ["placeholder", "aria-label"]) translateAttribute(task.node, name);
         }
       }
-      const node = task.walker.nextNode();
+      const node = task.walker?.nextNode();
       if (!node) { queue.shift(); queued.delete(task.node); continue; }
       if (node.nodeType === 3) translate(node);
       else if (node.matches('input[role="searchbox"],button[aria-label]')) {
@@ -760,6 +962,11 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const changedText = new Set();
     let ownershipChanged = false;
     for (const record of records) {
+      if (pageBoundaryObservers.has(record.target)) {
+        ownershipChanged = true;
+        refreshPageControls();
+        continue;
+      }
       if (sidebarBoundaryObservers.has(record.target)) {
         ownershipChanged = true;
         const sidebar = record.target.closest("[data-sidebar-live-width]");
@@ -808,6 +1015,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           }
         }
       } else if (record.type === "attributes") {
+        if (chromeRoots.has(record.target) && pageOwnerAttributes.includes(record.attributeName)) {
+          removeDisconnectedChromeRoots();
+        }
+        if (pageControls.has(record.target) &&
+            record.attributeName !== pageControls.get(record.target).attribute) refreshPageControls();
+        if (record.attributeName === "data-selected" &&
+            record.target.matches("button[data-sidebar-nav-item][data-command]")) refreshPageControls();
         if (!["placeholder", "aria-label"].includes(record.attributeName) ||
             (record.attributeName === "aria-label" && record.target.hasAttribute("data-settings-scroll"))) {
           ownershipChanged = true;
@@ -815,6 +1029,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         if (["placeholder", "aria-label"].includes(record.attributeName)) {
           translateAttribute(record.target, record.attributeName);
         }
+        if (record.attributeName === "data-placeholder") translateAttribute(record.target, record.attributeName);
         const popup = ownedPopupForTrigger(record.target);
         if (popup && ownedPopup(popup)) {
           if (chromeMenuKind(record.target)) observeChromePopup(popup);
@@ -834,6 +1049,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         if (dialog?.contains(record.target) && record.attributeName === "data-section-id") {
           scan(record.target, "settings");
         }
+        if (dialog?.contains(record.target) && record.attributeName === "data-subsetting-id") {
+          scan(record.target, "settings");
+        }
         if (dialog?.contains(record.target) && record.attributeName === "aria-label" &&
             record.target.hasAttribute("data-settings-scroll") && record.target.hasAttribute("aria-label")) {
           scan(record.target, "settings");
@@ -851,6 +1069,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       else if (chromeRootFor(node.parentElement)) scan(node, "chrome");
     }
     if (ownershipChanged) {
+      for (const popup of chromePopupObservers.keys()) {
+        if (!popup.isConnected || !ownedPopup(popup)) stopObservingChromePopup(popup);
+      }
       for (const [node, entry] of tracked) {
         if (entry.group ? !validGroup(entry.group) : !eligible(node)) {
           restore(node, entry);
@@ -871,7 +1092,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   observer.observe(portal, {
     subtree: true, childList: true, characterData: true, attributes: true,
     attributeFilter: ["aria-expanded", "aria-controls", "aria-haspopup", "data-settings-dialog-root",
-      "data-section-id", "data-settings-row", "data-user-content",
+      "data-section-id", "data-subsetting-id", "data-settings-row", "data-user-content",
       "contenteditable", "role", "class", "id", "aria-labelledby", "aria-label", "placeholder"]
   });
   observer.observe(document.body, { childList: true });
@@ -892,6 +1113,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       chromePopupObservers.clear();
       for (const boundaryObserver of sidebarBoundaryObservers.values()) boundaryObserver.disconnect();
       sidebarBoundaryObservers.clear();
+      for (const boundary of pageBoundaryObservers.values()) boundary.disconnect();
+      pageBoundaryObservers.clear();
+      pageRouteBoundaries.clear();
+      pageControls.clear();
       restoreTracked();
       dialog = null;
     }

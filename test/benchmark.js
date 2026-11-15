@@ -26,9 +26,24 @@ for (let i = 0; i < 5000; i++) {
 }
 const overlay = startSettingsTranslation(document, dictionary, { measure: true });
 const wait = () => new Promise(resolve => setTimeout(resolve, 0));
+async function settleObservers() {
+  const deadline = Date.now() + 3000;
+  let previous = "";
+  let stable = 0;
+  while (Date.now() < deadline) {
+    await wait();
+    const current = JSON.stringify([overlay.stats.callbacks, overlay.stats.settingsScans,
+      overlay.stats.chromeScans, overlay.stats.portalScans, overlay.stats.batchMs.length]);
+    stable = current === previous ? stable + 1 : 0;
+    if (stable >= 3) return;
+    previous = current;
+  }
+  throw new Error("UI setup observers did not settle");
+}
 while (document.querySelector('[data-testid="artifact-files-pill"] span').textContent !== "产物") await wait();
 await wait();
 async function run(label) {
+  await settleObservers();
   const before = overlay.stats.settingsScans;
   const chromeBefore = overlay.stats.chromeScans;
   const portalBefore = overlay.stats.portalScans;
@@ -36,6 +51,10 @@ async function run(label) {
   const started = performance.now();
   for (let i = 0; i < 1000; i++) chat.children[i].textContent = `Thinking ${i}`;
   await wait();
+  if (overlay.stats.settingsScans !== before || overlay.stats.chromeScans !== chromeBefore ||
+      overlay.stats.portalScans !== portalBefore || overlay.stats.callbacks !== callbacksBefore) {
+    throw new Error(`${label}: chat updates reached localization observers`);
+  }
   console.log(JSON.stringify({ label, chatNodes: chat.children.length, updates: 1000,
     settingsScans: overlay.stats.settingsScans - before,
     chromeScans: overlay.stats.chromeScans - chromeBefore,
@@ -52,11 +71,14 @@ dialog.innerHTML = `<section data-section-id="experimental-experiments">${
 }</section>`;
 const openStart = performance.now();
 document.getElementById("portal-root").append(dialog);
-while (dialog.querySelectorAll("h3")[299].textContent !== "WSL 主机") await wait();
+while (dialog.querySelectorAll("h3")[299].textContent !== "WSL 主机" ||
+    dialog.querySelectorAll("p")[299].textContent !== dictionary["Discover WSL distributions and create sessions inside them."]) await wait();
 console.log(JSON.stringify({ label: "open settings", settingsElements: dialog.querySelectorAll("*").length,
   elapsedMs: Number((performance.now() - openStart).toFixed(2)) }));
 await run("settings open");
 const before = overlay.stats.settingsScans;
+const settingsBatchesBefore = overlay.stats.batchMs.length;
+const settingsCallbacksBefore = overlay.stats.callbackMs.length;
 const start = performance.now();
 const headings = [...dialog.querySelectorAll("h3")].map(e => e.firstChild);
 for (let batch = 0; batch < 100; batch++) {
@@ -64,6 +86,7 @@ for (let batch = 0; batch < 100; batch++) {
   await wait();
 }
 while (headings[0].nodeValue !== "WSL 主机") await wait();
+await settleObservers();
 const summarize = samples => {
   const sorted = [...samples].sort((a, b) => a - b);
   return { samples: sorted.length, p95Ms: Number((sorted[Math.ceil(sorted.length * 0.95) - 1] || 0).toFixed(2)),
@@ -71,8 +94,9 @@ const summarize = samples => {
 };
 console.log(JSON.stringify({ label: "settings label updates", settingsElements: dialog.querySelectorAll("*").length,
   updates: 1000, settingsScans: overlay.stats.settingsScans - before,
-  elapsedMs: Number((performance.now() - start).toFixed(2)), drainBatches: summarize(overlay.stats.batchMs),
-  observerCallbacks: summarize(overlay.stats.callbackMs) }));
+  elapsedMs: Number((performance.now() - start).toFixed(2)),
+  drainBatches: summarize(overlay.stats.batchMs.slice(settingsBatchesBefore)),
+  observerCallbacks: summarize(overlay.stats.callbackMs.slice(settingsCallbacksBefore)) }));
 dialog.remove();
 await wait();
 const page = document.createElement("div");
@@ -94,6 +118,51 @@ await run("unverified Automations page present");
 page.remove();
 await wait();
 await run("work pages removed");
+const verifiedPage = document.createElement("div");
+verifiedPage.innerHTML = `<div><div><div><div><div data-factory-proposal-host="true"><header><h1>Automations</h1>
+  <div><div data-customize-category-header-row><div data-customize-category-drag-region><div><div>
+    <div data-tab-row-scroller><div role="tablist">${["Personal", "Shared", "Dreaming"].map(label =>
+      `<button role="tab" aria-selected="${label === "Personal"}"><span>${label}</span></button>`).join("")}
+    </div></div></div></div></div></div></div></header>
+  <div data-testid="workflow-gallery-card"><h2>Fictional automation</h2><p id="external-summary">External content</p></div>
+</div></div></div></div></div>`;
+document.querySelector("main").append(verifiedPage);
+async function settle(predicate) {
+  const deadline = Date.now() + 3000;
+  while (!predicate() && Date.now() < deadline) await wait();
+  if (!predicate()) throw new Error("Verified page controls did not settle");
+  await wait();
+}
+await settle(() => verifiedPage.querySelector('[role="tab"] span').textContent === "个人");
+await run("verified Automations header present");
+const pageLabels = [...verifiedPage.querySelectorAll('[role="tab"] span')].map(node => node.firstChild);
+const pageBefore = overlay.stats.chromeScans;
+const pageBatchesBefore = overlay.stats.batchMs.length;
+const pageCallbacksBefore = overlay.stats.callbackMs.length;
+const pageStart = performance.now();
+for (let batch = 0; batch < 100; batch++) {
+  pageLabels.forEach((node, index) => { node.nodeValue = ["Personal", "Shared", "Dreaming"][index]; });
+  await wait();
+}
+await settle(() => pageLabels[2].nodeValue === "构想");
+console.log(JSON.stringify({ label: "verified page label updates", controls: 3, updates: 300,
+  chromeScans: overlay.stats.chromeScans - pageBefore,
+  elapsedMs: Number((performance.now() - pageStart).toFixed(2)),
+  drainBatches: summarize(overlay.stats.batchMs.slice(pageBatchesBefore)),
+  observerCallbacks: summarize(overlay.stats.callbackMs.slice(pageCallbacksBefore)) }));
+const externalBefore = { ...overlay.stats };
+const externalStart = performance.now();
+for (let i = 0; i < 1000; i++) verifiedPage.querySelector("#external-summary").textContent = `External content ${i}`;
+await wait();
+console.log(JSON.stringify({ label: "external card updates", updates: 1000,
+  settingsScans: overlay.stats.settingsScans - externalBefore.settingsScans,
+  portalScans: overlay.stats.portalScans - externalBefore.portalScans,
+  chromeScans: overlay.stats.chromeScans - externalBefore.chromeScans,
+  callbacks: overlay.stats.callbacks - externalBefore.callbacks,
+  elapsedMs: Number((performance.now() - externalStart).toFixed(2)) }));
+verifiedPage.remove();
+await wait();
+await run("verified page removed");
 const sidebarLabels = [...document.querySelectorAll('[data-sidebar-nav-item] span')].map(node => node.firstChild);
 const originals = ["New", "Pull requests", "Issues", "Automations", "Customize"];
 const sidebarBefore = overlay.stats.chromeScans;
