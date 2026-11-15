@@ -22,15 +22,21 @@ for (let i = 0; i < 5000; i++) {
 }
 const overlay = startSettingsTranslation(document, dictionary, { measure: true });
 const wait = () => new Promise(resolve => setTimeout(resolve, 0));
+while (document.querySelector('[data-testid="artifact-files-pill"] span').textContent !== "产物") await wait();
+await wait();
 async function run(label) {
   const before = overlay.stats.settingsScans;
   const chromeBefore = overlay.stats.chromeScans;
+  const portalBefore = overlay.stats.portalScans;
+  const callbacksBefore = overlay.stats.callbacks;
   const started = performance.now();
   for (let i = 0; i < 1000; i++) chat.children[i].textContent = `Thinking ${i}`;
   await wait();
   console.log(JSON.stringify({ label, chatNodes: chat.children.length, updates: 1000,
     settingsScans: overlay.stats.settingsScans - before,
     chromeScans: overlay.stats.chromeScans - chromeBefore,
+    portalScans: overlay.stats.portalScans - portalBefore,
+    callbacks: overlay.stats.callbacks - callbacksBefore,
     elapsedMs: Number((performance.now() - started).toFixed(2)) }));
 }
 await run("settings closed");
@@ -63,5 +69,26 @@ console.log(JSON.stringify({ label: "settings label updates", settingsElements: 
   updates: 1000, settingsScans: overlay.stats.settingsScans - before,
   elapsedMs: Number((performance.now() - start).toFixed(2)), drainBatches: summarize(overlay.stats.batchMs),
   observerCallbacks: summarize(overlay.stats.callbackMs) }));
+dialog.remove();
+await wait();
+const page = document.createElement("div");
+page.innerHTML = `<div><div><div><div data-testid="my-work-inbox-view">
+  <div data-testid="my-work-list-pane"><div data-testid="my-work-filter-bar"><div><div data-tab-row-scroller>
+    <div role="tablist"><button role="tab" aria-selected="true">Assigned to me</button></div>
+  </div></div></div><div data-testid="my-work-inbox-scroll-container" role="tabpanel" data-f6-nav>
+    <div data-size="medium"><span>Nothing here</span></div>
+  </div></div>
+</div></div></div></div>`;
+document.querySelector("main").append(page);
+await wait();
+await run("unverified PR/Issue page present");
+page.innerHTML = `<header><h1>Automations</h1><div><div data-tab-row-scroller>
+  <div role="tablist"><button role="tab">Done</button></div>
+</div></div></header><div data-testid="workflow-gallery-card"><h2>Fictional automation</h2></div>`;
+await wait();
+await run("unverified Automations page present");
+page.remove();
+await wait();
+await run("work pages removed");
 overlay.stop();
 dom.window.close();

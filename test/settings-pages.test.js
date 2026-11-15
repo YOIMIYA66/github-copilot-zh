@@ -142,6 +142,42 @@ test("translates observed fixed settings while preserving code, shortcuts and pe
   dom.window.close();
 });
 
+test("session activity announcements remain English without changing switches or other settings", async () => {
+  const { dom, document } = fixture();
+  const page = document.querySelector('[data-settings-scroll][aria-label="Accessibility"]');
+  const section = document.createElement("section");
+  section.setAttribute("data-section-id", "accessibility-announcements");
+  const labels = ["Reasoning", "Tool calls", "Code search", "Read files", "Create files", "Edit files",
+    "Run CLI commands", "CLI command completed", "Switch models and agents", "Compact conversation context"];
+  section.innerHTML = `<h2>Session activity announcements</h2><p>Set what types of Copilot activity are announced.</p>${
+    labels.map((label, index) => `<div data-settings-row><div><h3>${label}</h3></div>
+      <button role="switch" aria-checked="${index % 2 === 0}"><span class="sr-only">${index % 2 === 0 ? "On" : "Off"}</span></button>
+      <span data-switch-state-label>${index % 2 === 0 ? "On" : "Off"}</span></div>`).join("")
+  }`;
+  page.append(section);
+  const other = document.createElement("section");
+  other.setAttribute("data-section-id", "accessibility-notifications");
+  other.innerHTML = '<div data-settings-row><button role="switch" aria-checked="true"><span class="sr-only">On</span></button><span data-switch-state-label>On</span></div>';
+  page.append(other);
+  const original = section.innerHTML;
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => other.querySelector("[data-switch-state-label]").textContent === "开启");
+  assert.equal(section.innerHTML, original);
+  const heading = section.querySelector("h3");
+  heading.firstChild.nodeValue = "On";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(heading.textContent, "On");
+  assert.deepEqual([...section.querySelectorAll('[role="switch"]')].map(node => node.getAttribute("aria-checked")),
+    labels.map((_, index) => String(index % 2 === 0)));
+  other.setAttribute("data-section-id", "accessibility-announcements");
+  await waitFor(() => other.querySelector("[data-switch-state-label]").textContent === "On");
+  assert.equal(other.querySelector('[role="switch"]').getAttribute("aria-checked"), "true");
+  overlay.stop();
+  assert.equal(section.querySelector("h2").textContent, "Session activity announcements");
+  assert.equal(other.querySelector("[data-switch-state-label]").textContent, "On");
+  dom.window.close();
+});
+
 test("reordered split content is restored without undoing host structural changes", async () => {
   const { dom, document } = fixture();
   const overlay = startSettingsTranslation(document, dictionary);

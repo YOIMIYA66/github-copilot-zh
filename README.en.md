@@ -51,8 +51,8 @@ This project translates selected fixed **Settings** text and verified static des
 | UI Area | Details |
 | :--- | :--- |
 | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
-| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons, Composer `Background` / `Artifacts` status labels, and exact fixed filter labels only on `role=tab` controls inside a `role=tablist` (e.g. PR filters Authored by me, Assigned to me, Involves me, Review requests, and Done) |
-| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, sidebar **account menu** and **theme submenu**; `Update authorization` / `Manage plan` / `Remove account` are matched only when an action-menu trigger is inside the Accounts Settings page and its popup ownership is valid |
+| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons and Composer `Background` / `Artifacts` status labels |
+| **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model/reasoning details**, **add-context menu**, sidebar **account menu** and **theme submenu**. The **tool-permissions submenu** keeps the native two-line layout: Chinese titles (`始终询问` / `辅助模式` / `全部允许`) above unchanged English descriptions; selection is not changed. `Update authorization` / `Manage plan` / `Remove account` are matched only when an action-menu trigger is inside the Accounts Settings page and its popup ownership is valid |
 | **Fixed Settings Choices** | System/Light/Dark controls inside a known Themes settings section and `data-settings-row`, plus Last N day(s) options only in the owned `sessions-cli-sessions` dropdown |
 
 ### 🛡️ Untouched (explicitly excluded, never modified)
@@ -61,7 +61,11 @@ This project translates selected fixed **Settings** text and verified static des
 | :--- | :--- |
 | **Conversations & Workspace** | Chat messages, `Thinking` / `Thought for N seconds` and other status labels, tool output, `Sent message …` lines, message-footer relative time and model information, and workspace files/paths. Footer ownership has not been verified, so these labels remain unchanged and are not scanned in this preview. |
 | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
-| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and other tooltips with unverified ownership. Model/reasoning details are translated only while a verified model menu is open and the tooltip matches its dedicated details structure; no specific tier association is inferred. PR/Issue filters are matched only within semantic `role=tablist` / `role=tab` controls; the specific Issue tabs have not been individually verified in the live app. |
+| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and other tooltips with unverified ownership. Model/reasoning details are translated only while a verified model menu is open and the tooltip matches its dedicated details structure; no specific tier association is inferred. |
+| **Work-Page Navigation & Empty States — Not Yet Supported** | PR, Issue and Automations subpage tabs and `Nothing here` remain English. Live inspection confirmed deeply nested PR/Issue `my-work-inbox-view` / `my-work-filter-bar` containers and tab semantics, but not how built-in tabs differ from user-created filters or how empty states differ from result content. Automations header/tab structure is only partially verified. The earlier generic `role=tablist` matching has been removed: those roles and matching words alone are not safe ownership evidence. No work-page or transcript observer has been added. |
+| **Session Activity Announcements** | The complete Settings `accessibility-announcements` section, including its heading, description, event labels and On/Off state labels, remains native English. Other settings still translate shared labels; switches are never changed. |
+
+Thinking indicators (`Thinking`, `Thinking…`, `Thinking...`, `Thought for N seconds`) and `Sent message …` tool records stay English; chat bodies are never translated. The source contains no translation rules for these strings. Live inspection by the coordinating session confirmed an enabled legacy overlay running alongside this project's instance; the legacy overlay was then stopped through its restoration mechanism. This version does not guess English from existing Chinese text or rewrite the transcript. Before a coordinated hot replacement, stop the previous overlay through its own restoration mechanism, then install the new version; evaluating this project's injection while its existing instance is active does not replace that instance.
 
 ---
 
@@ -218,10 +222,15 @@ The diagnostic overlay was installed in the running app, stopped/restored, and r
 
 | Synthetic Benchmark Scenario | Metric | Observed Value |
 | :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `252.08 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `231.06 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `173.12 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch count / p95/max; observer callback count / p95/max | `69` / `4.06/6.92 ms`; `173` / `0.10/2.31 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings / portal / fixed-UI scans; callbacks; elapsed | `0` / `0` / `0`; `0`; `201.81 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings / portal / fixed-UI scans; callbacks; elapsed | `0` / `0` / `0`; `0`; `215.68 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | `187.21 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Settings scans; batch count / p95/max; observer callback count / p95/max | `1,000`; `68` / `4.07/4.09 ms`; `173` / `0.07/2.12 ms` |
+| **Unverified PR/Issue page present, 5,000 chat nodes / 1,000 updates** | Settings / portal / fixed-UI scans; callbacks; elapsed | `0` / `0` / `0`; `0`; `231.18 ms` |
+| **Unverified Automations page present, same chat load** | Settings / portal / fixed-UI scans; callbacks; elapsed | `0` / `0` / `0`; `0`; `218.32 ms` |
+| **Work pages removed, same chat load** | Settings / portal / fixed-UI scans; callbacks; elapsed | `0` / `0` / `0`; `0`; `203.17 ms` |
+
+The page scenarios verify that unsupported page content is not observed; they do **not** demonstrate page-translation coverage. Initial fixed-control translation is allowed to settle before measuring chat updates. This revision passes **27 tests**, including permission-title/description separation, unchanged selection, host updates and restoration, excluded activity-announcement settings, and thinking/tool text protection even with matching test-dictionary entries. The coordinating session restored/reinstalled the current-page overlay and confirmed the legacy overlay disabled and the normal overlay started with measurement off; these status checks are not a visual coverage audit or an end-to-end launcher test.
 
 ---
 

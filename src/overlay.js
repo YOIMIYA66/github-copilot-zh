@@ -16,7 +16,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "sessions-close-terminal-confirmation", "sessions-edit-message-confirmation",
     "sessions-retry-response-confirmation", "sessions-cli-sessions",
     "sessions-session-lifecycle", "accessibility-display",
-    "accessibility-notifications", "accessibility-announcements",
+    "accessibility-notifications",
     "accessibility-keyboard-shortcuts-toggle", "accessibility-keyboard",
     "accessibility-conversation-transcript", "voice-mode-input-device",
     "voice-mode-shortcut", "voice-mode-recording-behavior",
@@ -52,19 +52,17 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     sidebarTheme: ["System", "Light", "Dark", "Open themes settings"],
     composerMode: ["Mode", "Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption", "Tool permissions", "Approve all"],
-    composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted",
-      "Uses AI to reduce approval prompts.", "Ask before running tools.", "Run tools without asking."],
+    composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted"],
     composerModel: ["Effort level", "Learn more",
       "Prioritizes capable models for challenging tasks and deeper reasoning.", "30% discount until Nov 30"],
     composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"]
   };
   const accountActionWords = ["Update authorization", "Manage plan", "Remove account"];
+  const permissionTitles = { Assisted: "辅助模式", "Approve all": "全部允许" };
   const chromeRootSelectors = [
     'nav[aria-labelledby="quick-links-heading"]', "[data-sidebar-footer]",
-    '[data-testid="composer-pills"]', "[data-rich-composer-footer]", '[role="tablist"]'
+    '[data-testid="composer-pills"]', "[data-rich-composer-footer]"
   ];
-  const workFilterWords = ["Authored by me", "Assigned to me", "Involves me", "Review requests",
-    "Created by me", "Mentioned", "Done"];
   const themeSectionIds = new Set(["general-theme", "themes-mode", "themes-terminal"]);
   const sessionWindowPattern = /^Last ([1-9]\d{0,2}) (day|days)$/;
   const chromeRoots = new Set();
@@ -121,7 +119,6 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function addChromeRoot(root) {
     if (chromeRoots.has(root)) return;
-    if (root.matches('[role="tablist"]') && root.closest("[data-settings-dialog-root]")) return;
     chromeRoots.add(root);
     const rootObserver = new document.defaultView.MutationObserver(mutations);
     rootObserver.observe(root, chromeObserverOptions);
@@ -205,11 +202,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         element.tagName === "SPAN" && !!element.closest('[role="menuitem"]');
     }
     if (owner.kind === "composerPermissions") {
-      if (["Approve all", "Always ask", "Ask every time", "Assisted"].includes(text)) {
-        return owner.words.includes(text) && !!element.closest('[role="menuitemradio"]');
-      }
       return owner.words.includes(text) &&
-        !!element.closest('[role="menuitemradio"] [data-menu-description]');
+        !!element.closest('[role="menuitemradio"]') &&
+        !element.closest("[data-menu-description]");
     }
     if (owner.kind === "composerModelDetails") {
       return element.tagName === "P" &&
@@ -288,10 +283,6 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function isChromeText(element, text) {
     const root = chromeRootFor(element);
     if (!root) return false;
-    if (root.matches('[role="tablist"]')) {
-      const tab = element.closest('[role="tab"]');
-      return workFilterWords.includes(text) && !!tab && root.contains(tab);
-    }
     if (root.matches('nav[aria-labelledby="quick-links-heading"]')) {
       return ["Automations", "Customize"].includes(text) &&
         !!element.closest("li > button") && root.contains(element.closest("li > button"));
@@ -501,6 +492,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function eligible(node) {
     const element = node.parentElement;
     if (!element || !node.isConnected || (dialog && !dialog.isConnected)) return false;
+    if (element.closest('[data-section-id="accessibility-announcements"]')) return false;
     if (element.closest("input,textarea,select,code,kbd,samp,pre,[contenteditable],[data-user-content]")) return false;
     const scroll = element.closest("[data-settings-scroll]");
     if (scroll && !scroll.hasAttribute("aria-label")) return false;
@@ -587,8 +579,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (saved) tracked.delete(node);
     if (translateSplitParagraph(node)) return;
     const parts = /^(\s*)(.*?)(\s*)$/s.exec(node.nodeValue);
-    const value = parts && (Object.hasOwn(dictionary, parts[2])
-      ? dictionary[parts[2]] : specialTranslation(node, parts[2]));
+    const permissionTitle = parts && ownedPopup(node.parentElement)?.kind === "composerPermissions" &&
+      Object.hasOwn(permissionTitles, parts[2]) ? permissionTitles[parts[2]] : null;
+    const value = permissionTitle || (parts && (Object.hasOwn(dictionary, parts[2])
+      ? dictionary[parts[2]] : specialTranslation(node, parts[2])));
     if (!value || value === parts[2]) {
       if (options.measure && parts?.[2] && !Object.hasOwn(dictionary, parts[2]) && !unmatched.has(node)) {
         unmatched.add(node);
@@ -647,8 +641,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     let remaining = 150;
     while (queue.length && remaining > 0 && clock.now() - start < 4) {
       const task = queue[0];
+      const element = task.node.nodeType === 3 ? task.node.parentElement : task.node;
       if (!task.node.isConnected ||
-          (!dialog && !chromeRootFor(task.node) && !ownedPopup(task.node))) {
+          (!dialog && !chromeRootFor(element) && !ownedPopup(element))) {
         queue.shift();
         queued.delete(task.node);
         continue;

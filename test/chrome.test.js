@@ -149,11 +149,11 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(document.querySelector('[aria-labelledby="quick-links-heading"] li:last-child button').textContent, "扩展中心");
   assert.deepEqual([...document.querySelectorAll('nav[aria-label="Pull requests"] [role=tab]')].map(node =>
     [node.textContent, node.getAttribute("aria-selected")]), [
-    ["我发起的3", "true"], ["分配给我的", "false"], ["与我相关", "false"], ["审查请求", "false"], ["已完成", "false"]
+    ["Authored by me3", "true"], ["Assigned to me", "false"], ["Involves me", "false"], ["Review requests", "false"], ["Done", "false"]
   ]);
   assert.deepEqual([...document.querySelectorAll('nav[aria-label="Issues"] [role=tab]')].map(node =>
     [node.textContent, node.getAttribute("aria-selected")]), [
-    ["我创建的", "true"], ["分配给我的", "false"], ["提及我的", "false"], ["已完成", "false"]
+    ["Created by me", "true"], ["Assigned to me", "false"], ["Mentioned", "false"], ["Done", "false"]
   ]);
   assert.equal(document.querySelector('nav[aria-label="Pull requests"] .count').textContent, "3");
   assert.equal(document.querySelector('[data-testid="background-activity-pill"] .count').textContent, "4");
@@ -181,9 +181,9 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(document.querySelector("#theme-popup-generated [role=menuitem] span").textContent, "打开主题设置");
   assert.equal(document.querySelector("#theme-popup-generated kbd").textContent, "@");
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [role=menuitemradio] > span:first-child")].map(node => node.textContent),
-    ["始终询问", "辅助审批", "全部批准"]);
+    ["始终询问", "辅助模式", "全部允许"]);
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [data-menu-description]")].map(node => node.textContent),
-    ["运行工具前询问。", "使用 AI 减少审批提示。", "运行工具前不再询问。"]);
+    ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
   assert.equal(document.querySelector("#model-details-generated p:last-child").textContent, "优惠 15%，截止至 11 月 15 日");
   assert.equal(document.querySelector('#unrelated-popup [role=menuitem]').textContent, "Manage sessions");
   assert.equal(document.getElementById("profile-menu-generated").getAttribute("aria-label"), "Fictional User, open user menu");
@@ -243,5 +243,112 @@ test("closes and restores a chrome menu when its dynamic trigger ownership ends"
   trigger.setAttribute("aria-expanded", "true");
   await waitFor(() => description.textContent === "逐步协作");
   overlay.stop();
+  dom.window.close();
+});
+
+test("permission titles are Chinese while native descriptions and selection remain unchanged", async () => {
+  const { dom, document } = fixture();
+  const popup = document.getElementById("permissions-popup-generated");
+  const items = [...popup.querySelectorAll('[role="menuitemradio"]')];
+  items.forEach((item, index) => item.setAttribute("aria-checked", String(index === 1)));
+  document.getElementById("portal-root").innerHTML = `<div role="dialog" data-settings-dialog-root>
+    <section data-section-id="sessions-auto-approve"><button aria-haspopup="listbox">Assisted</button></section>
+  </div>`;
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => items[2].firstElementChild.textContent === "全部允许" &&
+    document.querySelector('[data-section-id="sessions-auto-approve"] button').textContent === "辅助审批");
+  assert.deepEqual(items.map(item => item.firstElementChild.textContent), ["始终询问", "辅助模式", "全部允许"]);
+  assert.deepEqual(items.map(item => item.getAttribute("aria-checked")), ["false", "true", "false"]);
+  assert.deepEqual(items.map(item => item.lastElementChild.textContent),
+    ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
+  items[1].lastElementChild.firstChild.nodeValue = "Assisted";
+  items[1].firstElementChild.firstChild.nodeValue = "Always ask";
+  await waitFor(() => items[1].firstElementChild.textContent === "始终询问");
+  assert.equal(items[1].lastElementChild.textContent, "Assisted");
+  const trigger = document.getElementById("permissions-trigger-generated");
+  trigger.setAttribute("aria-expanded", "false");
+  await waitFor(() => items[0].firstElementChild.textContent === "Always ask");
+  assert.deepEqual(items.map(item => item.firstElementChild.textContent), ["Always ask", "Always ask", "Approve all"]);
+  trigger.setAttribute("aria-expanded", "true");
+  await waitFor(() => items[2].firstElementChild.textContent === "全部允许");
+  overlay.stop();
+  assert.deepEqual(items.map(item => item.firstElementChild.textContent), ["Always ask", "Always ask", "Approve all"]);
+  assert.equal(items[1].lastElementChild.textContent, "Assisted");
+  assert.deepEqual(items.map(item => item.getAttribute("aria-checked")), ["false", "true", "false"]);
+  dom.window.close();
+});
+
+test("unverified work and automation tabs, result content and empty states are not observed", async () => {
+  const { dom, document } = fixture();
+  for (const trigger of document.querySelectorAll('[aria-haspopup="menu"]')) trigger.setAttribute("aria-expanded", "false");
+  const main = document.querySelector("main");
+  const route = document.createElement("div");
+  route.innerHTML = `<div><div><div><div data-testid="my-work-inbox-view">
+    <div data-testid="my-work-list-pane"><div data-testid="my-work-filter-bar">
+      <div><div data-tab-row-scroller><div role="tablist">
+        <button role="tab" aria-selected="true" data-tauri-drag-region="false"><span>Assigned to me</span></button>
+        <button role="tab" aria-selected="false" data-tauri-drag-region="false"><span>Mentioning me</span></button>
+        <button role="tab" aria-selected="false"><span>Done</span></button>
+      </div></div></div>
+    </div><div><div data-testid="my-work-inbox-scroll-container" role="tabpanel" data-f6-nav>
+      <div><div data-size="medium"><div><div><span>Nothing here</span></div></div></div></div>
+      <article><h2>Assigned to me</h2><p>Nothing here</p></article>
+    </div></div></div>
+  </div></div></div></div>`;
+  main.append(route);
+  const overlay = startSettingsTranslation(document, dictionary);
+  await new Promise(resolve => setTimeout(resolve, 50));
+  const before = { ...overlay.stats };
+  const initial = route.textContent;
+  route.querySelector("article p").firstChild.nodeValue = "Done";
+  document.querySelector(".chat p").firstChild.nodeValue = "Nothing here";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(route.querySelector('[role="tab"]').textContent, "Assigned to me");
+  assert.equal(route.querySelector('[data-size="medium"]').textContent, "Nothing here");
+  route.remove();
+  const automation = document.createElement("div");
+  automation.innerHTML = `<header><h1>Automations</h1><div><div data-tab-row-scroller>
+    <div role="tablist"><button role="tab">Done</button></div>
+  </div></div></header><div data-testid="workflow-gallery-card"><h2>Assigned to me</h2><p>Nothing here</p></div>`;
+  main.append(automation);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(automation.querySelector('[role="tab"]').textContent, "Done");
+  assert.equal(automation.querySelector("h2").textContent, "Assigned to me");
+  assert.ok(initial.includes("Mentioning me"));
+  assert.equal(route.querySelector('[role="tab"]').getAttribute("aria-selected"), "true");
+  for (const key of ["settingsScans", "portalScans", "chromeScans"]) {
+    assert.equal(overlay.stats[key], before[key], `${key} changed for unverified page content`);
+  }
+  overlay.stop();
+  dom.window.close();
+});
+
+test("thinking indicators and tool records stay English even with matching dictionary entries", async () => {
+  const { dom, document } = fixture();
+  for (const trigger of document.querySelectorAll('[aria-haspopup="menu"]')) trigger.setAttribute("aria-expanded", "false");
+  const texts = ["Thinking", "Thinking…", "Thinking...", "Thought for 2 seconds", "Sent message to user"];
+  const chat = document.querySelector(".chat");
+  chat.replaceChildren(...texts.map(text => {
+    const node = document.createElement("p");
+    node.textContent = text;
+    return node;
+  }));
+  const overlay = startSettingsTranslation(document, {
+    ...dictionary, ...Object.fromEntries(texts.map(text => [text, "SHOULD NOT TRANSLATE"]))
+  });
+  await waitFor(() => document.querySelector('[data-testid="artifact-files-pill"]').textContent === "产物2");
+  await new Promise(resolve => setTimeout(resolve, 10));
+  const before = { ...overlay.stats };
+  for (const node of chat.children) {
+    node.firstChild.nodeValue = "Thinking…";
+    node.firstChild.nodeValue = texts[[...chat.children].indexOf(node)];
+  }
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.deepEqual([...chat.children].map(node => node.textContent), texts);
+  for (const key of ["settingsScans", "portalScans", "chromeScans", "callbacks"]) {
+    assert.equal(overlay.stats[key], before[key], `${key} changed for thinking/tool updates`);
+  }
+  overlay.stop();
+  assert.deepEqual([...chat.children].map(node => node.textContent), texts);
   dom.window.close();
 });
