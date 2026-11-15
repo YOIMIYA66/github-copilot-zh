@@ -9,9 +9,7 @@
 [![Target](https://img.shields.io/badge/Copilot%20Desktop-1.4.2-24292F?logo=githubcopilot)](https://github.com/features/copilot)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A5%2022-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![PowerShell](https://img.shields.io/badge/PowerShell-%E2%89%A5%207-5391FE?logo=powershell&logoColor=white)](https://github.com/PowerShell/PowerShell)
-[![Dependencies](https://img.shields.io/badge/Runtime%20Deps-0-success)](./package.json)
 [![Status](https://img.shields.io/badge/Status-Source%20Preview-orange)](./README.md)
-[![License](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
 
 **简体中文 | [English](./README.en.md)**
 
@@ -38,14 +36,14 @@
 
 ## 🎯 翻译范围与边界
 
-| 类别 | 适用区域 | 具体内容 |
+| 策略 | 适用区域 | 具体内容 |
 | :--- | :--- | :--- |
-| **✅ 翻译内容**<br>*(结构白名单 + 词典精确匹配)* | **设置对话框（Settings）** | 设置导航栏、分类标题、选项标签、说明文本、更新状态提示、受支持的跨节点拆分段落，以及归属已验证的设置下拉框与操作按钮 |
-| | **主界面静态控件** | 侧边栏 `Automations` / `Customize` 导航按钮、Composer 顶部的 `Background` / `Artifacts` 状态胶囊标签 |
-| | **双向关联弹出菜单** | 经触发器与菜单 ID 双向验证的 Composer **模式菜单**、**模型与推理强度菜单**、**添加上下文菜单**以及侧边栏底部的**账户菜单**固定文案 |
-| **🛡️ 保留原样**<br>*(显式排除，绝不修改)* | **对话与工作区** | 聊天正文、Thinking（思考）和其他状态标签、工具输出、工作区文件与路径 |
-| | **代码与用户输入** | 代码块（`code`/`pre`）、键盘快捷键按键（`kbd`）、输入框与可编辑区域、用户自定义名称/路径/数值、项目/仓库/个人资料及各类计数 |
-| | **专有名称与未知提示** | `Interactive` / `Plan` / `Autopilot` 模式名、模型与级别名称，以及归属无法确认的工具提示（例如 Max 级别的独立详情提示，因无法验证其与具体菜单项的可访问名称关联而保留英文） |
+| **✅ 翻译** | **设置对话框（Settings）** | 设置导航栏、分类标题、选项标签、说明文本、更新状态提示、受支持的跨节点拆分段落，以及归属已验证的设置下拉框与操作按钮 |
+| **✅ 翻译** | **主界面静态控件** | 侧边栏 `Automations` / `Customize` 导航按钮、Composer 顶部的 `Background` / `Artifacts` 状态胶囊标签 |
+| **✅ 翻译** | **双向关联弹出菜单** | 经触发器与菜单 ID 双向验证的 Composer **模式菜单**、**模型与推理强度菜单**、**添加上下文菜单**以及侧边栏底部的**账户菜单**固定文案 |
+| **🛡️ 保留原文** | **对话与工作区** | 聊天正文、`Thinking`（思考）和其他状态标签、工具输出、工作区文件与路径 |
+| **🛡️ 保留原文** | **代码与用户输入** | 代码块（`code`/`pre`）、键盘快捷键按键（`kbd`）、输入框与可编辑区域、用户自定义名称/路径/数值、项目/仓库/个人资料及各类计数 |
+| **🛡️ 保留原文** | **专有名称与未知提示** | `Interactive` / `Plan` / `Autopilot` 模式名、模型与级别名称，以及归属无法确认的工具提示（例如 Max 级别的独立详情提示，因无法验证其与具体菜单项的可访问名称关联而保留英文） |
 
 ---
 
@@ -121,6 +119,14 @@ https://github.com/YOIMIYA66/github-copilot-zh。
 
 ### 运行流程
 
+```mermaid
+flowchart LR
+    A["1. 预检与签名校验<br/>(start.ps1)"] --> B["2. 回环端口启动应用<br/>(127.0.0.1 调试端口)"]
+    B --> C["3. 进程树与目标双重校验<br/>(verify-listener.ps1 + cdp.js)"]
+    C --> D["4. 注入白名单汉化层<br/>(overlay.js + dictionary.js)"]
+    D -. "Ctrl+C / 停止" .-> E["5. 注销脚本并无损还原<br/>(removeInjection)"]
+```
+
 1. **环境与签名预检（`start.ps1`）**：检查 PowerShell 7+ 与 Node.js 22+，校验 `github.exe` 的 `GitHub, Inc.` 数字签名，确认当前无运行中的 `github.exe` 进程。
 2. **回环调试端口启动（`start.ps1`）**：分配本地空闲端口，通过临时环境变量 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 仅在 `127.0.0.1` 回环地址上启用 WebView2 远程调试并启动应用。
 3. **双重归属与目标校验（`connect.js` / `verify-listener.ps1` / `cdp.js`）**：在获取调试目标前与 WebSocket 握手成功后，双重验证监听端口独占绑定 `127.0.0.1`、监听进程为微软签名的 `msedgewebview2.exe` 且隶属于刚启动的 `github.exe` 进程树，并核对页面标题与 `http://tauri.localhost` Origin。
@@ -161,12 +167,12 @@ github-copilot-zh/
 
 | 采样阶段 | `settingsScans` | `portalScans` | `chromeScans` | `callbacks` | 耗时统计（Overlay 自身计时） |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **菜单交互前静置（约 8 秒，关闭态）** | `+0` | `+0` | `+0` | `+0` | 无扫描与回调触发 |
-| **原生输入依次打开并关闭 4 个菜单各一次** | `+0` | `+12` | `+20` | `+23` | **处理批次（共 5 个）**：p95 / 最大 `1.40 ms`，总计 `3.60 ms`<br>**观察器回调（共 26 个）**：p95 `0.30 ms` / 最大 `0.40 ms`，总计 `2.50 ms` |
-| **菜单交互后静置（约 8 秒，关闭态）** | `+0` | `+0` | `+0` | `+0` | 无扫描与回调触发 |
-| **交互后累计总计** *(含初始 4 次 chrome 根扫描)* | `0` | `12` | `24` | `26` | — |
+| **菜单交互前静置（~8s，关闭态）** | `+0` | `+0` | `+0` | `+0` | 无扫描与回调触发 |
+| **依次打开并关闭 4 个菜单各一次** | `+0` | `+12` | `+20` | `+23` | **5 个处理批次**：p95 / max `1.40 ms`（共 `3.60 ms`）<br>**26 次回调**：p95 `0.30 ms` / max `0.40 ms`（共 `2.50 ms`） |
+| **菜单交互后静置（~8s，关闭态）** | `+0` | `+0` | `+0` | `+0` | 无扫描与回调触发 |
+| **交互后累计总计** *(含初始 4 次根扫描)* | `0` | `12` | `24` | `26` | — |
 
-> **样本局限说明**：以上耗时仅为汉化层（overlay）内部自身计时，不是全应用 CPU、内存或 FPS 测量；该脚本仅执行了菜单开合交互，未叠加合成聊天负载，也未进行逐句翻译覆盖验收。
+> **样本局限说明**：以上耗时仅为汉化层（overlay）内部自身计时，不是全应用 CPU、内存或 FPS 测量；该脚本仅执行了原生输入菜单开合交互，未叠加合成聊天负载，也未进行逐句翻译覆盖验收。
 
 ### 2. JSDOM 合成基准样本（`npm run benchmark`，单次运行）
 

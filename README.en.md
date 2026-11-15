@@ -9,9 +9,7 @@
 [![Target](https://img.shields.io/badge/Copilot%20Desktop-1.4.2-24292F?logo=githubcopilot)](https://github.com/features/copilot)
 [![Node.js](https://img.shields.io/badge/Node.js-%E2%89%A5%2022-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![PowerShell](https://img.shields.io/badge/PowerShell-%E2%89%A5%207-5391FE?logo=powershell&logoColor=white)](https://github.com/PowerShell/PowerShell)
-[![Dependencies](https://img.shields.io/badge/Runtime%20Deps-0-success)](./package.json)
 [![Status](https://img.shields.io/badge/Status-Source%20Preview-orange)](./README.en.md)
-[![License](https://img.shields.io/badge/License-MIT-blue)](./LICENSE)
 
 **[简体中文](./README.md) | English**
 
@@ -38,14 +36,14 @@ This project translates selected fixed **Settings** text and verified static des
 
 ## 🎯 Translation Scope & Boundaries
 
-| Category | UI Area | Details |
+| Policy | UI Area | Details |
 | :--- | :--- | :--- |
-| **✅ Translated**<br>*(Structural allowlist + exact dictionary match)* | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
-| | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
-| | **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model & reasoning menu**, **add-context menu**, and sidebar **account/profile menu** when trigger and menu IDs match bidirectionally |
-| **🛡️ Untouched**<br>*(Explicitly excluded & protected)* | **Conversations & Workspace** | Chat messages, Thinking and other status labels, tool output, and workspace files/paths |
-| | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
-| | **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and tooltips with unverified ownership (e.g., the standalone Max-tier details tooltip remains in English because its accessible-name relationship to a specific menu option has not been verified) |
+| **✅ Translated** | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
+| **✅ Translated** | **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
+| **✅ Translated** | **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **model & reasoning menu**, **add-context menu**, and sidebar **account/profile menu** when trigger and menu IDs match bidirectionally |
+| **🛡️ Untouched** | **Conversations & Workspace** | Chat messages, `Thinking` and other status labels, tool output, and workspace files/paths |
+| **🛡️ Untouched** | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
+| **🛡️ Untouched** | **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and tooltips with unverified ownership (e.g., the standalone Max-tier details tooltip remains in English because its accessible-name relationship to a specific menu option has not been verified) |
 
 ---
 
@@ -125,6 +123,14 @@ failure or uncertainty and explain how to stop and restore the app.
 
 ### Lifecycle
 
+```mermaid
+flowchart LR
+    A["1. Pre-flight & Signature<br/>(start.ps1)"] --> B["2. Loopback Debug Launch<br/>(127.0.0.1 Port)"]
+    B --> C["3. Dual Process & Origin Check<br/>(verify-listener.ps1 + cdp.js)"]
+    C --> D["4. Scoped Overlay Injection<br/>(overlay.js + dictionary.js)"]
+    D -. "Ctrl+C / Stop" .-> E["5. Deregister & Restore<br/>(removeInjection)"]
+```
+
 1. **Pre-flight & Signature Check (`start.ps1`)**: Verifies PowerShell 7+ and Node.js 22+, checks the `GitHub, Inc.` Authenticode signature on `github.exe`, and ensures no `github.exe` instance is already running.
 2. **Loopback Debug Launch (`start.ps1`)**: Allocates an ephemeral loopback port and launches `github.exe` with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` bound strictly to `127.0.0.1`.
 3. **Dual Process & Target Verification (`connect.js` / `verify-listener.ps1` / `cdp.js`)**: Before fetching `/json/list` and again after WebSocket open, verifies that the port is exclusively bound to `127.0.0.1` by a `Microsoft Corporation`-signed `msedgewebview2.exe` descending from the launched `github.exe` PID, and validates the `http://tauri.localhost` page target.
@@ -165,12 +171,12 @@ The diagnostic overlay was installed in the running app, stopped/restored, and r
 
 | Sample Window | `settingsScans` | `portalScans` | `chromeScans` | `callbacks` | Overlay Timing Summary |
 | :--- | :---: | :---: | :---: | :---: | :--- |
-| **~8 s before menu interactions (menus closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
-| **Open & close each of the 4 menus once (native input)** | `+0` | `+12` | `+20` | `+23` | **5 processing batches**: p95 / max `1.40 ms` (`3.60 ms` total)<br>**26 observer callbacks**: p95 `0.30 ms` / max `0.40 ms` (`2.50 ms` total) |
-| **~8 s after menu interactions (menus closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
-| **Final Cumulative Counts** *(incl. 4 initial chrome-root scans)* | `0` | `12` | `24` | `26` | — |
+| **~8 s before menu interactions (closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
+| **Open & close each of 4 menus once** | `+0` | `+12` | `+20` | `+23` | **5 batches**: p95 / max `1.40 ms` (`3.60 ms` total)<br>**26 callbacks**: p95 `0.30 ms` / max `0.40 ms` (`2.50 ms` total) |
+| **~8 s after menu interactions (closed)** | `+0` | `+0` | `+0` | `+0` | No scans or callbacks triggered |
+| **Final Cumulative Counts** *(incl. 4 root scans)* | `0` | `12` | `24` | `26` | — |
 
-> **Sample Limitations**: These are internal overlay timings, not whole-app CPU, memory, or FPS measurements. This run exercised menus only, without synthetic chat load or a sentence-by-sentence translation coverage audit.
+> **Sample Limitations**: These are internal overlay timings, not whole-app CPU, memory, or FPS measurements. This run exercised native-input menu open/close interactions only, without synthetic chat load or a sentence-by-sentence translation coverage audit.
 
 ### 2. Synthetic JSDOM Benchmark (`npm run benchmark`, single run)
 
