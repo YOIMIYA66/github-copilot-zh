@@ -25,7 +25,22 @@ function fixture() {
       <section data-section-id="sessions-branch-prefix"><div><div><h2>Default branch prefix</h2><p><span id="branch"></span></p></div></div><input value="fictional-user"></section>
       <section data-section-id="sessions-worktree-location"><div><div><h2>Worktree location</h2><p><span id="worktree"></span></p></div></div><p>Example: C:\\fictional\\path</p></section>
     </section>
-    <section data-settings-scroll aria-label="Themes"><section data-section-id="themes-palette"><div><div><h2>Palettes</h2><p id="palette"></p></div></div><ul><li>Palettes</li></ul></section></section>
+    <section data-settings-scroll aria-label="Themes">
+      <section data-section-id="themes-mode">
+        <div data-settings-row><div><h3>App appearance</h3><div role="group">
+          <button role="radio" aria-checked="true"><span>System</span></button>
+          <button role="radio" aria-checked="false"><span>Light</span></button>
+          <button role="radio" aria-checked="false"><span>Dark</span></button>
+        </div></div></div>
+        <button role="radio">Dark</button>
+      </section>
+      <section data-section-id="themes-terminal"><div data-settings-row><div><h3>Terminal appearance</h3><div role="group">
+        <button role="radio" aria-checked="true">System</button>
+        <button role="radio" aria-checked="false">Light</button>
+        <button role="radio" aria-checked="false">Dark</button>
+      </div></div></div></section>
+      <section data-section-id="themes-palette"><div><div><h2>Palettes</h2><p id="palette"></p></div></div><ul><li>Palettes</li></ul></section>
+    </section>
     <section data-settings-scroll aria-label="Accessibility"><section data-section-id="accessibility-keyboard-shortcuts-toggle"><div data-settings-row><div><h3 id="shortcut"></h3><p>Sets Copilot to Interactive, Plan, or Autopilot. Requires Use keyboard shortcuts enabled.</p></div></div></section></section>
     <section data-settings-scroll aria-label="Voice dictation"><section data-section-id="voice-mode-input-device"><div><h2>Input device</h2><p>Choose which microphone Voice dictation should use when recording.</p></div><button>Personal microphone</button></section></section>
     <section data-settings-scroll aria-label="Computer Use"><p>Computer Use lets Copilot interact with desktop apps by clicking controls, entering text, and using visual context.</p><section data-section-id="computer-use-general"></section></section>
@@ -105,6 +120,15 @@ test("translates observed fixed settings while preserving code, shortcuts and pe
   button.click();
   assert.equal(clicked, true);
   assert.equal(document.getElementById("palette").textContent, "在辅助功能中配置更多选项。");
+  assert.deepEqual([...document.querySelectorAll('[data-section-id="themes-mode"] [data-settings-row] [role=radio]')].map(node =>
+    [node.textContent, node.getAttribute("aria-checked")]), [
+    ["系统", "true"], ["浅色", "false"], ["深色", "false"]
+  ]);
+  assert.deepEqual([...document.querySelectorAll('[data-section-id="themes-terminal"] [role=radio]')].map(node =>
+    [node.textContent, node.getAttribute("aria-checked")]), [
+    ["系统", "true"], ["浅色", "false"], ["深色", "false"]
+  ]);
+  assert.equal(document.querySelector('[data-section-id="themes-mode"] > button').textContent, "Dark");
   assert.equal(document.querySelector('[data-section-id="themes-palette"] li').textContent, "Palettes");
   assert.deepEqual([...document.querySelectorAll("#shortcut kbd")].map(e => e.textContent), ["⇧", "⇥"]);
   assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] h2').textContent, "输入设备");
@@ -112,6 +136,7 @@ test("translates observed fixed settings while preserving code, shortcuts and pe
   assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] button').textContent, "Personal microphone");
   assert.match(document.querySelector('[aria-label="Computer Use"] > p').textContent, /^计算机使用功能允许/);
   overlay.stop();
+  assert.equal(document.querySelector('[data-section-id="themes-mode"] [role=radio]').textContent, "System");
   assert.equal(button.textContent, "global storage location");
   assert.equal(document.getElementById("branch").querySelector("code").textContent, "%username%");
   dom.window.close();

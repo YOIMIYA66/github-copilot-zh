@@ -8,7 +8,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const fixedSections = new Set([
     "general-auto-update", "general-launch-at-login", "general-tray-menu",
     "general-delete-chat-confirmation", "general-delete-view-confirmation",
-    "general-find-in-workspace-position", "general-notification-sound",
+    "general-find-in-workspace-position", "general-notification-sound", "general-theme",
     "sessions-manage-sessions", "sessions-verbosity", "sessions-image-generation-watermark",
     "sessions-auto-approve", "sessions-agent-merge-byline", "sessions-commit-attribution",
     "sessions-memory", "sessions-remote-default", "sessions-remote-discovery",
@@ -52,16 +52,21 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     sidebarTheme: ["System", "Light", "Dark", "Open themes settings"],
     composerMode: ["Mode", "Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption", "Tool permissions", "Approve all"],
-    composerPermissions: ["Always ask", "Ask every time", "Assisted", "Uses AI to reduce approval prompts.",
-      "Ask before running tools."],
+    composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted",
+      "Uses AI to reduce approval prompts.", "Ask before running tools.", "Run tools without asking."],
     composerModel: ["Effort level", "Learn more",
       "Prioritizes capable models for challenging tasks and deeper reasoning.", "30% discount until Nov 30"],
     composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"]
   };
+  const accountActionWords = ["Update authorization", "Manage plan", "Remove account"];
   const chromeRootSelectors = [
     'nav[aria-labelledby="quick-links-heading"]', "[data-sidebar-footer]",
-    '[data-testid="composer-pills"]', "[data-rich-composer-footer]"
+    '[data-testid="composer-pills"]', "[data-rich-composer-footer]", '[role="tablist"]'
   ];
+  const workFilterWords = ["Authored by me", "Assigned to me", "Involves me", "Review requests",
+    "Created by me", "Mentioned", "Done"];
+  const themeSectionIds = new Set(["general-theme", "themes-mode", "themes-terminal"]);
+  const sessionWindowPattern = /^Last ([1-9]\d{0,2}) (day|days)$/;
   const chromeRoots = new Set();
   const chromeRootObservers = new Map();
   const mainRoot = document.querySelector("main[data-app-shell-main][data-f6-nav]");
@@ -116,6 +121,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function addChromeRoot(root) {
     if (chromeRoots.has(root)) return;
+    if (root.matches('[role="tablist"]') && root.closest("[data-settings-dialog-root]")) return;
     chromeRoots.add(root);
     const rootObserver = new document.defaultView.MutationObserver(mutations);
     rootObserver.observe(root, chromeObserverOptions);
@@ -153,6 +159,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     return null;
   }
 
+  function isSettingsChoice(section, text) {
+    if (!Object.hasOwn(popupWords, section)) return false;
+    if (popupWords[section].includes(text)) return true;
+    const match = section === "sessions-cli-sessions" && sessionWindowPattern.exec(text);
+    return !!match && ((match[1] === "1") === (match[2] === "day"));
+  }
+
   function chromeMenuKind(trigger) {
     if (!trigger || !trigger.id || trigger.getAttribute("aria-expanded") !== "true" ||
         trigger.getAttribute("aria-haspopup") !== "menu") return null;
@@ -187,8 +200,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       return owner.words.includes(text) &&
         (!!element.closest('[role="menuitem"],[role="menuitemradio"]'));
     }
+    if (owner.kind === "settingsAccountActions") {
+      return accountActionWords.includes(text) &&
+        element.tagName === "SPAN" && !!element.closest('[role="menuitem"]');
+    }
     if (owner.kind === "composerPermissions") {
-      if (["Always ask", "Ask every time", "Assisted"].includes(text)) {
+      if (["Approve all", "Always ask", "Ask every time", "Assisted"].includes(text)) {
         return owner.words.includes(text) && !!element.closest('[role="menuitemradio"]');
       }
       return owner.words.includes(text) &&
@@ -271,6 +288,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function isChromeText(element, text) {
     const root = chromeRootFor(element);
     if (!root) return false;
+    if (root.matches('[role="tablist"]')) {
+      const tab = element.closest('[role="tab"]');
+      return workFilterWords.includes(text) && !!tab && root.contains(tab);
+    }
     if (root.matches('nav[aria-labelledby="quick-links-heading"]')) {
       return ["Automations", "Customize"].includes(text) &&
         !!element.closest("li > button") && root.contains(element.closest("li > button"));
@@ -279,9 +300,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const button = element.closest("button[data-testid]");
       if (!button || !root.contains(button)) return false;
       return (button.matches('button[data-testid="background-activity-pill"][aria-controls="background-activity-list"]') &&
-          text === "Background") ||
-        (button.matches('button[data-testid="artifact-files-pill"][aria-controls="artifact-files-list"]') &&
-          text === "Artifacts");
+          text === "Background");
     }
     return false;
   }
@@ -300,6 +319,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function isFixedRowText(element) {
     const section = element.closest("[data-section-id]");
     if (!section || !fixedSections.has(section.getAttribute("data-section-id"))) return false;
+    if (themeSectionIds.has(section.getAttribute("data-section-id")) &&
+        ["System", "Light", "Dark"].includes(element.textContent.trim())) {
+      const control = element.closest('button,[role="radio"],[role="tab"],[role="option"]');
+      const row = element.closest("[data-settings-row]");
+      if (control && row && row.contains(control) && section.contains(row)) return true;
+    }
     const headingOrDescription = element.closest("h2,h3,p");
     if (headingOrDescription && section.contains(headingOrDescription) &&
         !headingOrDescription.closest("button,a,[data-user-content]")) return true;
@@ -376,6 +401,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const discount = /^(\d+(?:\.\d+)?)% discount until (Nov \d{1,2})$/.exec(text);
       if (discount) return `优惠 ${discount[1]}%，截止至 ${discount[2].replace("Nov ", "11 月 ")} 日`;
     }
+    if (popup?.kind === "settings" && popup.section === "sessions-cli-sessions") {
+      const sessionWindow = sessionWindowPattern.exec(text);
+      if (sessionWindow && ((sessionWindow[1] === "1") === (sessionWindow[2] === "day"))) {
+        return `最近 ${sessionWindow[1]} 天`;
+      }
+    }
     if (text === "Preview" &&
         element.matches('li[id$="-option-computer-use"] > button > div[data-trailing-visual] > span')) {
       return "预览";
@@ -418,8 +449,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (!trigger || trigger.getAttribute("aria-expanded") !== "true" ||
         trigger.getAttribute("aria-haspopup") !== role) return null;
     if (dialog?.contains(trigger)) {
+      if (role === "menu" && trigger.closest('[data-settings-scroll][aria-label="Accounts"]')) {
+        if (!popup.id || trigger.getAttribute("aria-controls") !== popup.id) return null;
+        return { popup, words: accountActionWords, kind: "settingsAccountActions" };
+      }
       const section = trigger.closest("[data-section-id]")?.getAttribute("data-section-id");
-      if (Object.hasOwn(popupWords, section)) return { popup, words: popupWords[section], kind: "settings" };
+      if (Object.hasOwn(popupWords, section)) return { popup, words: popupWords[section], section, kind: "settings" };
     }
     const kind = chromeMenuKind(trigger);
     const presentation = popup.parentElement;
@@ -458,7 +493,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const trigger = element.closest('[aria-haspopup="listbox"],[aria-haspopup="menu"]');
     if (!trigger || !dialog.contains(trigger)) return false;
     const section = trigger.closest("[data-section-id]")?.getAttribute("data-section-id");
-    return Object.hasOwn(popupWords, section) && popupWords[section].includes(text);
+    return isSettingsChoice(section, text);
   }
 
   function eligible(node) {
@@ -473,7 +508,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         isFixedChoice(element, text) || isFixedAction(element, text) || isUpdateStatus(element))) return true;
     if (isChromeText(element, text)) return true;
     const owner = ownedPopup(element);
-    if (owner?.kind === "settings") return owner.words.includes(text);
+    if (owner?.kind === "settings") return isSettingsChoice(owner.section, text);
     return chromePopupText(owner, element, text) || creditsText(owner, node, text);
   }
 
@@ -649,7 +684,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (!dialog || !dialog.contains(trigger) || !trigger.id ||
         trigger.getAttribute("aria-expanded") !== "true") return null;
     const section = trigger.closest("[data-section-id]")?.getAttribute("data-section-id");
-    if (!Object.hasOwn(popupWords, section)) return null;
+    const accountMenu = trigger.getAttribute("aria-haspopup") === "menu" &&
+      !!trigger.closest('[data-settings-scroll][aria-label="Accounts"]');
+    if (!Object.hasOwn(popupWords, section) && !accountMenu) return null;
     return popupForTrigger(trigger);
   }
 
@@ -796,7 +833,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   discoverChromeRoots(document);
   observer.observe(portal, {
     subtree: true, childList: true, characterData: true, attributes: true,
-    attributeFilter: ["aria-expanded", "data-settings-dialog-root", "data-section-id", "data-settings-row", "data-user-content",
+    attributeFilter: ["aria-expanded", "aria-controls", "aria-haspopup", "data-settings-dialog-root",
+      "data-section-id", "data-settings-row", "data-user-content",
       "contenteditable", "role", "class", "id", "aria-labelledby", "aria-label", "placeholder"]
   });
   observer.observe(document.body, { childList: true });

@@ -47,7 +47,23 @@ function fixture() {
             data-base-ui-tooltip-trigger aria-label="Add context &amp; more"></button>
         </div>
       </div>
-      <div class="chat"><p>Background</p><p>Artifacts</p><p>Thinking</p></div>
+      <nav role="tablist" aria-label="Pull requests">
+        <button role="tab" aria-selected="true"><span>Authored by me</span><span class="count">3</span></button>
+        <button role="tab" aria-selected="false">Assigned to me</button>
+        <button role="tab" aria-selected="false">Involves me</button>
+        <button role="tab" aria-selected="false">Review requests</button>
+        <button role="tab" aria-selected="false">Done</button>
+      </nav>
+      <nav role="tablist" aria-label="Issues">
+        <button role="tab" aria-selected="true">Created by me</button>
+        <button role="tab" aria-selected="false">Assigned to me</button>
+        <button role="tab" aria-selected="false">Mentioned</button>
+        <button role="tab" aria-selected="false">Done</button>
+      </nav>
+      <div class="chat">
+        <p>Background</p><p>Artifacts</p><p>Thinking</p><p>Thought for 2 seconds</p>
+        <p>Sent message to user</p><footer>Message metadata</footer><p>Artifacts 22</p>
+      </div>
     </div>
   </main>
   <div id="portal-root"></div>
@@ -94,7 +110,8 @@ function fixture() {
     <div role="menuitem"><span>Open themes settings</span><kbd>@</kbd></div>`) }
   ${menu("permissions-popup-generated", "permissions-trigger-generated", `
     <div role="menuitemradio"><span>Always ask</span><span data-menu-description>Ask before running tools.</span></div>
-    <div role="menuitemradio"><span>Assisted</span><span data-menu-description>Uses AI to reduce approval prompts.</span></div>`) }
+    <div role="menuitemradio"><span>Assisted</span><span data-menu-description>Uses AI to reduce approval prompts.</span></div>
+    <div role="menuitemradio"><span>Approve all</span><span data-menu-description>Run tools without asking.</span></div>`) }
   <div data-base-ui-portal><div role="presentation" data-open>
     <div role="dialog" id="model-details-generated" data-auto-tier-details-overlay data-open
       data-side="right" aria-labelledby="unknown-generated-label">
@@ -120,7 +137,6 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   await waitFor(() => [...modePopup.querySelectorAll("[data-menu-description]")].every((node, index) =>
     node.textContent === ["逐步协作", "先制定计划，准备就绪后执行", "不中断地端到端执行"][index]) &&
     document.getElementById("profile-popup-generated").textContent.includes("管理账户") &&
-    document.querySelector('[data-testid="artifact-files-pill"]').textContent.startsWith("产物") &&
     document.querySelector("#model-popup-generated [role=none] div").textContent === "推理强度" &&
     document.querySelector('#model-popup-generated a[href="#learn"]').firstChild.nodeValue === "了解详情" &&
     [...document.querySelectorAll('[role="none"] span[id]')].map(node => node.textContent).join("|") ===
@@ -129,11 +145,20 @@ test("translates only verified static chrome and bidirectionally owned menus", a
     "优先为高难度任务和深入推理提供能力更强的模型。" &&
     document.querySelector("#model-details-generated p:last-child").textContent === "优惠 15%，截止至 11 月 15 日");
   assert.equal(document.querySelector('[aria-labelledby="quick-links-heading"] li:first-child button').textContent, "自动化");
-  assert.equal(document.querySelector('[aria-labelledby="quick-links-heading"] li:last-child button').textContent, "自定义");
+  assert.equal(document.querySelector('[aria-labelledby="quick-links-heading"] li:last-child button').textContent, "扩展中心");
+  assert.deepEqual([...document.querySelectorAll('nav[aria-label="Pull requests"] [role=tab]')].map(node =>
+    [node.textContent, node.getAttribute("aria-selected")]), [
+    ["我发起的3", "true"], ["分配给我的", "false"], ["与我相关", "false"], ["审查请求", "false"], ["已完成", "false"]
+  ]);
+  assert.deepEqual([...document.querySelectorAll('nav[aria-label="Issues"] [role=tab]')].map(node =>
+    [node.textContent, node.getAttribute("aria-selected")]), [
+    ["我创建的", "true"], ["分配给我的", "false"], ["提及我的", "false"], ["已完成", "false"]
+  ]);
+  assert.equal(document.querySelector('nav[aria-label="Pull requests"] .count').textContent, "3");
   assert.equal(document.querySelector('[data-testid="background-activity-pill"] .count').textContent, "4");
   assert.equal(document.querySelector('[data-testid="artifact-files-pill"] .count').textContent, "2");
   assert.equal(document.querySelector('[data-testid="background-activity-pill"]').textContent, "后台4");
-  assert.equal(document.querySelector('[data-testid="artifact-files-pill"]').textContent, "产物2");
+  assert.equal(document.querySelector('[data-testid="artifact-files-pill"]').textContent, "Artifacts2");
   assert.deepEqual([...modePopup.querySelectorAll("[data-menu-description]")].map(node => node.textContent),
     ["逐步协作", "先制定计划，准备就绪后执行", "不中断地端到端执行"]);
   assert.equal(modePopup.querySelector("#mode-title-generated").textContent, "模式");
@@ -155,13 +180,14 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(document.querySelector("#theme-popup-generated [role=menuitem] span").textContent, "打开主题设置");
   assert.equal(document.querySelector("#theme-popup-generated kbd").textContent, "@");
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [role=menuitemradio] > span:first-child")].map(node => node.textContent),
-    ["始终询问", "辅助审批"]);
+    ["始终询问", "辅助审批", "全部批准"]);
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [data-menu-description]")].map(node => node.textContent),
-    ["运行工具前询问。", "使用 AI 减少审批提示。"]);
+    ["运行工具前询问。", "使用 AI 减少审批提示。", "运行工具前不再询问。"]);
   assert.equal(document.querySelector("#model-details-generated p:last-child").textContent, "优惠 15%，截止至 11 月 15 日");
   assert.equal(document.querySelector('#unrelated-popup [role=menuitem]').textContent, "Manage sessions");
   assert.equal(document.getElementById("profile-menu-generated").getAttribute("aria-label"), "Fictional User, open user menu");
-  assert.deepEqual([...document.querySelector(".chat").children].map(node => node.textContent), ["Background", "Artifacts", "Thinking"]);
+  assert.deepEqual([...document.querySelector(".chat").children].map(node => node.textContent),
+    ["Background", "Artifacts", "Thinking", "Thought for 2 seconds", "Sent message to user", "Message metadata", "Artifacts 22"]);
   const scans = overlay.stats.settingsScans;
   const callbacks = overlay.stats.callbacks;
   document.querySelector(".chat p").firstChild.nodeValue = "Updated message";
@@ -170,6 +196,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(overlay.stats.callbacks, callbacks);
   overlay.stop();
   assert.equal(document.querySelector('[data-testid="background-activity-pill"]').textContent, "Background4");
+  assert.equal(document.querySelector('[data-testid="artifact-files-pill"]').textContent, "Artifacts2");
   assert.equal(modePopup.querySelector("[data-menu-description]").textContent, "Step-by-step collaboration");
   assert.equal(document.querySelector("#profile-popup-generated > div:last-child span span").textContent, "AI credits used: 13%");
   assert.equal(document.getElementById("model-popup-generated").querySelector('[role="none"] div').textContent, "Effort level");
@@ -185,7 +212,7 @@ test("closed chrome popups and matching chat words do not trigger scans", async 
   const { dom, document } = fixture();
   for (const trigger of document.querySelectorAll('[aria-haspopup="menu"]')) trigger.setAttribute("aria-expanded", "false");
   const overlay = startSettingsTranslation(document, dictionary);
-  await new Promise(resolve => setTimeout(resolve, 10));
+  await new Promise(resolve => setTimeout(resolve, 50));
   const before = { ...overlay.stats };
   document.querySelector(".chat").innerHTML = "<p>Theme</p><p>Light</p><p>Always ask</p><p>Prioritizes capable models for challenging tasks and deeper reasoning.</p>";
   await new Promise(resolve => setTimeout(resolve, 10));

@@ -53,6 +53,9 @@ function fixture() {
         <section data-section-id="general-find-in-workspace-position">
           <button id="position" role="combobox" aria-haspopup="listbox" aria-expanded="true"></button>
         </section>
+        <section data-section-id="sessions-cli-sessions">
+          <button id="session-window" role="combobox" aria-haspopup="listbox" aria-expanded="true"></button>
+        </section>
         <section data-section-id="sessions-auto-approve">
           <button id="approvals" aria-haspopup="menu" aria-expanded="true">Assisted</button>
         </section>
@@ -65,13 +68,31 @@ function fixture() {
         </div><div><ul><li>General</li></ul></div></section></section>
         <section data-settings-scroll aria-label="Accounts"><div><div></div><div>
           <div><div><h2>Connected accounts</h2><p>Repositories use the default account unless changed in repository settings.</p></div><div></div></div>
-          <ul role="list"><li><h2>Connected accounts</h2></li></ul>
+          <ul role="list"><li><h2>Connected accounts</h2></li>
+            <li><span>fictional-account</span><button id="account-actions-trigger" aria-haspopup="menu" aria-expanded="true"
+              aria-controls="account-actions-menu">Account actions</button></li>
+          </ul>
         </div></div></section>
       </div>
       <div role="listbox" id="position-list"><div role="option">Top right</div></div>
       <div role="listbox" id="other-list"><div role="option">Top right</div></div>
+      <div role="listbox" id="session-window-list">
+        <div role="option" aria-selected="true">Last 1 day</div>
+        <div role="option">Last 2 days</div>
+        <div role="option">Last 365 days</div>
+        <div role="option">Last 2 day</div>
+      </div>
       <div role="menu" aria-labelledby="approvals"><div role="menuitem">Approve all</div></div>
-      <div role="menu" aria-labelledby="unrelated"><div role="menuitem">Approve all</div></div>
+      <div role="menu" aria-labelledby="unrelated">
+        <div role="menuitem">Approve all</div>
+        <div role="menuitem"><span>Update authorization</span></div>
+        <div role="menuitem"><span>Manage plan</span></div>
+        <div role="menuitem"><span>Remove account</span></div>
+      </div>
+      <div role="menu" id="account-actions-menu" aria-labelledby="account-actions-trigger">
+        <div role="menuitem"><span>Update authorization</span></div>
+        <div role="menuitem"><a href="https://example.invalid/plan"><span>Manage plan</span><svg aria-hidden="true">↗</svg></a></div>
+        <div role="menuitem" class="destructive"><span>Remove account</span></div>
     </div></div></body>`);
   const paragraph = dom.window.document.getElementById("split");
   for (const text of ["Show the GitHub Copilot icon in the ", "system tray", "."]) {
@@ -83,7 +104,8 @@ function fixture() {
 test("translates only fixed settings labels and owned popup options", async () => {
   const { dom, document } = fixture();
   const overlay = startSettingsTranslation(document, dictionary);
-  await waitFor(() => document.querySelector('[aria-labelledby="approvals"] [role=menuitem]').textContent === "全部批准");
+  await waitFor(() => document.querySelector('[aria-labelledby="approvals"] [role=menuitem]').textContent === "全部批准" &&
+    document.querySelector("#account-actions-menu [role=menuitem]").textContent === "更新授权");
   assert.equal(document.querySelector("nav li span").textContent, "常规");
   assert.equal(document.querySelector("#nav-option-account span").textContent, "账户");
   assert.equal(document.querySelector('[id="nav-option-project%3Afictional"] span').textContent, "Accounts");
@@ -109,8 +131,13 @@ test("translates only fixed settings labels and owned popup options", async () =
   assert.equal(document.querySelector('[data-section-id="model-providers-providers"] button').textContent, "添加提供商");
   assert.equal(document.querySelector('[data-section-id="environments-list"] p').textContent, "连接和管理代理会话的环境。");
   assert.equal(document.querySelector("#position-list [role=option]").textContent, "右上角");
+  assert.deepEqual([...document.querySelectorAll("#session-window-list [role=option]")].map(node =>
+    [node.textContent, node.getAttribute("aria-selected")]), [
+    ["最近 1 天", "true"], ["最近 2 天", null], ["最近 365 天", null], ["Last 2 day", null]
+  ]);
   assert.equal(document.querySelector("#other-list [role=option]").textContent, "Top right");
-  assert.equal(document.querySelector('[aria-labelledby="unrelated"] [role=menuitem]').textContent, "Approve all");
+  assert.deepEqual([...document.querySelectorAll('[aria-labelledby="unrelated"] [role=menuitem]')].map(node => node.textContent),
+    ["Approve all", "Update authorization", "Manage plan", "Remove account"]);
   document.querySelector("#approvals").setAttribute("aria-expanded", "false");
   await waitFor(() => document.querySelector('[aria-labelledby="approvals"] [role=menuitem]').textContent === "Approve all");
   assert.equal(document.querySelector("#chat").textContent, "GeneralThinking");
@@ -120,8 +147,23 @@ test("translates only fixed settings labels and owned popup options", async () =
   assert.equal(document.querySelector('[data-settings-scroll][aria-label="Accounts"] h2').textContent, "已连接的账户");
   assert.match(document.querySelector('[data-settings-scroll][aria-label="Accounts"] p').textContent, /^除非在仓库设置/);
   assert.equal(document.querySelector('[data-settings-scroll][aria-label="Accounts"] li h2').textContent, "Connected accounts");
+  assert.deepEqual([...document.querySelectorAll("#account-actions-menu [role=menuitem]")].map(node => node.textContent),
+    ["更新授权", "管理订阅计划↗", "移除账号"]);
+  assert.equal(document.querySelector("#account-actions-menu a").getAttribute("href"), "https://example.invalid/plan");
+  assert.equal(document.querySelector("#account-actions-menu svg").textContent, "↗");
+  assert.equal(document.querySelector('[data-settings-scroll][aria-label="Accounts"] li span').textContent, "fictional-account");
   assert.equal(document.querySelector('[data-section-id="themes-terminal"] input').value, "Terminal font");
+  document.getElementById("account-actions-trigger").setAttribute("aria-controls", "unrelated-menu");
+  await waitFor(() => document.querySelector("#account-actions-menu [role=menuitem]").textContent === "Update authorization");
+  document.getElementById("account-actions-trigger").setAttribute("aria-controls", "account-actions-menu");
+  await waitFor(() => document.querySelector("#account-actions-menu [role=menuitem]").textContent === "更新授权");
+  document.getElementById("account-actions-trigger").setAttribute("aria-expanded", "false");
+  await waitFor(() => document.querySelector("#account-actions-menu [role=menuitem]").textContent === "Update authorization");
+  document.getElementById("account-actions-trigger").setAttribute("aria-expanded", "true");
+  await waitFor(() => document.querySelector("#account-actions-menu [role=menuitem]").textContent === "更新授权");
   overlay.stop();
+  assert.deepEqual([...document.querySelectorAll("#account-actions-menu [role=menuitem]")].map(node => node.textContent),
+    ["Update authorization", "Manage plan↗", "Remove account"]);
   dom.window.close();
 });
 
