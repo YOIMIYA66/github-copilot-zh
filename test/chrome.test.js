@@ -17,6 +17,29 @@ function menu(id, triggerId, content) {
   </div></div>`;
 }
 
+function sidebarNavigation() {
+  return `<nav><ul>${[
+    ["home", "navigation.home", "New"],
+    ["pulls", "navigation.pulls", "Pull requests"],
+    ["issues", "navigation.issues", "Issues"],
+    ["workflows", "navigation.automations", "Automations"],
+    ["extensions", "navigation.customize", "Customize"]
+  ].map(([item, command, label]) => `<li><button data-sidebar-nav-item="${item}" data-command="${command}"
+    ${item === "home" ? 'data-sidebar-file-drop-kind="new"' : ""} data-selected="false">
+    <svg aria-hidden="true"></svg><span><span><span><span>${label}</span></span></span></span><kbd>Ctrl+1</kbd>
+  </button></li>`).join("")}</ul></nav>`;
+}
+
+function sidebarFixture(initial = true) {
+  const dom = new JSDOM(`<body><div data-sidebar-live-width><div>
+    <div data-testid="sidebar-scroll-viewport" data-offscreen-pause-root="true">
+      <div id="fixed-navigation">${initial ? sidebarNavigation() : ""}</div>
+      <ul id="session-list"><li><button>New</button></li><li><button>Pull requests</button></li><li><button>Issues</button></li></ul>
+    </div></div></div><main data-app-shell-main data-f6-nav><div id="chat"><p>New</p><p>Issues</p></div></main>
+    <div id="portal-root"></div></body>`);
+  return { dom, document: dom.window.document };
+}
+
 function fixture() {
   const dom = new JSDOM(`<body><main data-app-shell-main data-f6-nav>
     <div data-testid="conversation-root">
@@ -141,10 +164,10 @@ test("translates only verified static chrome and bidirectionally owned menus", a
     document.querySelector("#model-popup-generated [role=none] div").textContent === "推理强度" &&
     document.querySelector('#model-popup-generated a[href="#learn"]').firstChild.nodeValue === "了解详情" &&
     [...document.querySelectorAll('[role="none"] span[id]')].map(node => node.textContent).join("|") ===
-      "优惠 30%，截止至 11 月 30 日|优惠 15%，截止至 11 月 15 日|优惠 30%，截止至 11 月 30 日");
+      "30% discount until Nov 30|15% discount until Nov 15|30% discount until Nov 30");
   await waitFor(() => document.querySelector("#model-details-generated p").textContent ===
     "优先为高难度任务和深入推理提供能力更强的模型。" &&
-    document.querySelector("#model-details-generated p:last-child").textContent === "优惠 15%，截止至 11 月 15 日");
+    document.querySelector("#model-details-generated p:last-child").textContent === "15% discount until Nov 15");
   assert.equal(document.querySelector('[aria-labelledby="quick-links-heading"] li:first-child button').textContent, "自动化");
   assert.equal(document.querySelector('[aria-labelledby="quick-links-heading"] li:last-child button').textContent, "扩展中心");
   assert.deepEqual([...document.querySelectorAll('nav[aria-label="Pull requests"] [role=tab]')].map(node =>
@@ -167,7 +190,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
     ["Interactive", "Plan", "Autopilot"]);
   assert.equal(document.getElementById("model-popup-generated").querySelector('[role="none"] div').textContent, "推理强度");
   assert.deepEqual([...document.querySelectorAll('[role="none"] span[id]')].map(node => node.textContent),
-    ["优惠 30%，截止至 11 月 30 日", "优惠 15%，截止至 11 月 15 日", "优惠 30%，截止至 11 月 30 日"]);
+    ["30% discount until Nov 30", "15% discount until Nov 15", "30% discount until Nov 30"]);
   assert.equal(document.querySelector('#model-popup-generated a[href="#learn"]').firstChild.nodeValue, "了解详情");
   assert.ok(document.querySelector("#model-popup-generated svg"));
   assert.deepEqual([...document.querySelectorAll("#context-popup-generated [role=menuitem] > span > span")].map(node => node.textContent),
@@ -175,7 +198,7 @@ test("translates only verified static chrome and bidirectionally owned menus", a
   assert.equal(document.querySelector("#context-popup-generated kbd").textContent, "@");
   assert.equal(document.querySelector('#profile-popup-generated [role=menuitem] span span').textContent, "管理账户");
   assert.equal(document.querySelector('#profile-popup-generated [role=menuitem]:nth-child(2) span span').textContent, "管理会话");
-  assert.equal(document.querySelector("#profile-popup-generated > div:last-child span span").textContent, "AI 点数已使用：13%");
+  assert.equal(document.querySelector("#profile-popup-generated > div:last-child span span").textContent, "AI credits used: 13%");
   assert.deepEqual([...document.querySelectorAll("#theme-popup-generated [role=menuitemradio]")].map(node => node.textContent),
     ["系统", "浅色", "深色"]);
   assert.equal(document.querySelector("#theme-popup-generated [role=menuitem] span").textContent, "打开主题设置");
@@ -184,7 +207,11 @@ test("translates only verified static chrome and bidirectionally owned menus", a
     ["始终询问", "辅助模式", "全部允许"]);
   assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [data-menu-description]")].map(node => node.textContent),
     ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
-  assert.equal(document.querySelector("#model-details-generated p:last-child").textContent, "优惠 15%，截止至 11 月 15 日");
+  assert.equal(document.querySelector("#model-details-generated p:last-child").textContent, "15% discount until Nov 15");
+  const discount = document.querySelector("#model-details-generated p:last-child");
+  discount.firstChild.nodeValue = "20.5% discount until Nov 16";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(discount.textContent, "20.5% discount until Nov 16");
   assert.equal(document.querySelector('#unrelated-popup [role=menuitem]').textContent, "Manage sessions");
   assert.equal(document.getElementById("profile-menu-generated").getAttribute("aria-label"), "Fictional User, open user menu");
   assert.deepEqual([...document.querySelector(".chat").children].map(node => node.textContent),
@@ -323,10 +350,12 @@ test("unverified work and automation tabs, result content and empty states are n
   dom.window.close();
 });
 
-test("thinking indicators and tool records stay English even with matching dictionary entries", async () => {
+test("all chat activity notifications stay English even with matching dictionary entries", async () => {
   const { dom, document } = fixture();
   for (const trigger of document.querySelectorAll('[aria-haspopup="menu"]')) trigger.setAttribute("aria-expanded", "false");
-  const texts = ["Thinking", "Thinking…", "Thinking...", "Thought for 2 seconds", "Sent message to user"];
+  const texts = ["Thinking", "Thinking…", "Thinking...", "Thought for 2 seconds", "Sent message to user",
+    "Reasoning", "Tool calls", "Code search", "Reading files", "Creating files", "Editing files",
+    "Running CLI commands", "CLI commands finish running", "Changing models and agents", "Compacting the conversation"];
   const chat = document.querySelector(".chat");
   chat.replaceChildren(...texts.map(text => {
     const node = document.createElement("p");
@@ -350,5 +379,143 @@ test("thinking indicators and tool records stay English even with matching dicti
   }
   overlay.stop();
   assert.deepEqual([...chat.children].map(node => node.textContent), texts);
+  dom.window.close();
+});
+
+test("translates command-owned sidebar buttons without changing selection, shortcuts or user names", async () => {
+  const { dom, document } = sidebarFixture();
+  const nav = document.querySelector("#fixed-navigation nav");
+  const wrong = document.createElement("li");
+  wrong.innerHTML = '<button data-sidebar-nav-item="issues" data-command="navigation.pulls"><span>Issues</span></button>';
+  nav.querySelector("ul").append(wrong);
+  const overlay = startSettingsTranslation(document, dictionary);
+  const buttons = [...nav.querySelectorAll("button")].slice(0, 5);
+  await waitFor(() => buttons[4].querySelector("span").textContent === "扩展中心");
+  assert.deepEqual(buttons.map(button => button.querySelector("span").textContent),
+    ["新建", "拉取请求", "议题", "自动化", "扩展中心"]);
+  assert.ok(buttons.every(button => button.getAttribute("data-selected") === "false"));
+  assert.ok(buttons.every(button => button.querySelector("kbd").textContent === "Ctrl+1" && button.querySelector("svg")));
+  assert.equal(wrong.textContent, "Issues");
+  assert.deepEqual([...document.querySelectorAll("#session-list button")].map(node => node.textContent),
+    ["New", "Pull requests", "Issues"]);
+  let clicks = 0;
+  buttons[0].addEventListener("click", () => clicks++);
+  buttons[0].click();
+  assert.equal(clicks, 1);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  const before = { ...overlay.stats };
+  document.querySelector("#chat p").firstChild.nodeValue = "Pull requests";
+  document.querySelector("#session-list button").firstChild.nodeValue = "Issues";
+  const session = document.createElement("li");
+  session.innerHTML = '<button data-sidebar-nav-item="issues" data-command="navigation.issues">Issues</button>';
+  document.getElementById("session-list").append(session);
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(session.textContent, "Issues");
+  for (const key of ["settingsScans", "portalScans", "chromeScans", "callbacks"]) {
+    assert.equal(overlay.stats[key], before[key], `${key} changed for chat or session names`);
+  }
+  overlay.stop();
+  assert.deepEqual(buttons.map(button => button.querySelector("span").textContent),
+    ["New", "Pull requests", "Issues", "Automations", "Customize"]);
+  dom.window.close();
+});
+
+test("discovers delayed and replaced sidebar navigation and restores changed button ownership", async () => {
+  const { dom, document } = sidebarFixture(false);
+  const overlay = startSettingsTranslation(document, dictionary);
+  const container = document.getElementById("fixed-navigation");
+  container.innerHTML = sidebarNavigation();
+  await waitFor(() => container.querySelector('[data-sidebar-nav-item="issues"] span').textContent === "议题");
+  const oldNav = container.firstElementChild;
+  container.innerHTML = sidebarNavigation();
+  await waitFor(() => container.querySelector('[data-sidebar-nav-item="home"] span').textContent === "新建");
+  assert.equal(oldNav.querySelector('[data-sidebar-nav-item="home"] span').textContent, "New");
+  const viewport = document.querySelector('[data-testid="sidebar-scroll-viewport"]');
+  const replacement = document.createElement("div");
+  replacement.setAttribute("data-testid", "sidebar-scroll-viewport");
+  replacement.innerHTML = `<div id="replacement-navigation">${sidebarNavigation()}</div><ul><li>Issues</li></ul>`;
+  viewport.replaceWith(replacement);
+  await waitFor(() => replacement.querySelector('[data-sidebar-nav-item="issues"] span').textContent === "议题");
+  const button = replacement.querySelector('[data-sidebar-nav-item="issues"]');
+  button.setAttribute("data-command", "navigation.pulls");
+  await waitFor(() => button.querySelector("span").textContent === "Issues");
+  button.setAttribute("data-command", "navigation.issues");
+  await waitFor(() => button.querySelector("span").textContent === "议题");
+  button.setAttribute("data-user-content", "");
+  await waitFor(() => button.querySelector("span").textContent === "Issues");
+  button.removeAttribute("data-user-content");
+  await waitFor(() => button.querySelector("span").textContent === "议题");
+  button.querySelector("span span span span").firstChild.nodeValue = "Personal issue name";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(button.querySelector("span").textContent, "Personal issue name");
+  const sidebar = document.querySelector("[data-sidebar-live-width]");
+  sidebar.remove();
+  await new Promise(resolve => setTimeout(resolve, 10));
+  const before = { ...overlay.stats };
+  replacement.querySelector("#replacement-navigation").innerHTML = sidebarNavigation();
+  document.querySelector("#chat p").firstChild.nodeValue = "New";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  for (const key of ["settingsScans", "portalScans", "chromeScans", "callbacks"]) {
+    assert.equal(overlay.stats[key], before[key], `${key} changed after sidebar removal`);
+  }
+  overlay.stop();
+  dom.window.close();
+});
+
+test("profile fixed labels translate at different text depths while identity and credits remain English", async () => {
+  const { dom, document } = fixture();
+  const popup = document.getElementById("profile-popup-generated");
+  const switchItem = document.createElement("div");
+  switchItem.setAttribute("role", "menuitem");
+  switchItem.innerHTML = "<span><span><span><span>Switch account</span></span></span></span>";
+  popup.insertBefore(switchItem, popup.firstChild);
+  const identity = document.createElement("div");
+  identity.innerHTML = "<span>Theme</span><span>fictional@example.invalid</span>";
+  popup.insertBefore(identity, popup.firstChild);
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => switchItem.textContent === "切换账号" &&
+    document.getElementById("theme-trigger-generated").textContent === "主题" &&
+    [...popup.querySelectorAll('[role="menuitem"]')].some(item => item.textContent === "键盘快捷键") &&
+    [...popup.querySelectorAll('[role="menuitem"]')].some(item => item.textContent === "退出登录"));
+  assert.ok([...popup.querySelectorAll('[role="menuitem"]')].some(item => item.textContent === "键盘快捷键"));
+  assert.ok([...popup.querySelectorAll('[role="menuitem"]')].some(item => item.textContent === "退出登录"));
+  assert.equal(identity.textContent, "Themefictional@example.invalid");
+  const credits = popup.querySelector(":scope > div:last-child span span");
+  assert.equal(credits.textContent, "AI credits used: 13%");
+  credits.firstChild.nodeValue = "AI credits used: 20.5%";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(credits.textContent, "AI credits used: 20.5%");
+  const scans = overlay.stats.portalScans;
+  identity.firstElementChild.firstChild.nodeValue = "Sign out";
+  await new Promise(resolve => setTimeout(resolve, 10));
+  assert.equal(identity.firstElementChild.textContent, "Sign out");
+  assert.equal(overlay.stats.portalScans, scans);
+  overlay.stop();
+  assert.equal(switchItem.textContent, "Switch account");
+  assert.equal(document.getElementById("theme-trigger-generated").textContent, "Theme");
+  assert.equal(credits.textContent, "AI credits used: 20.5%");
+  dom.window.close();
+});
+
+test("submenu ownership ignores semantic hidden mirrors and shortcuts, not duplicate visible labels", async () => {
+  const { dom, document } = fixture();
+  const theme = document.getElementById("theme-trigger-generated");
+  const permissions = document.getElementById("permissions-trigger-generated");
+  const modeTitle = document.getElementById("mode-title-generated");
+  theme.innerHTML = '<span aria-hidden="true">Theme</span><span>Theme</span><kbd>Ctrl+T</kbd>';
+  permissions.innerHTML = '<span aria-hidden="true">Tool permissions</span><span>Tool permissions</span>';
+  modeTitle.innerHTML = '<span aria-hidden="true">Mode</span><span>Mode</span>';
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => document.querySelector("#theme-popup-generated [role=menuitemradio] span").textContent === "系统" &&
+    document.querySelector("#permissions-popup-generated [role=menuitemradio]:last-child span").textContent === "全部允许");
+  assert.equal(theme.querySelector("kbd").textContent, "Ctrl+T");
+  assert.equal(permissions.querySelector('span:not([aria-hidden])').textContent, "工具权限");
+  assert.equal(modeTitle.querySelector('span:not([aria-hidden])').textContent, "模式");
+  assert.deepEqual([...document.querySelectorAll("#permissions-popup-generated [data-menu-description]")].map(node => node.textContent),
+    ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."]);
+  permissions.innerHTML = "<span>Tool permissions</span><span>Tool permissions</span>";
+  await waitFor(() => document.querySelector("#permissions-popup-generated [role=menuitemradio] span").textContent === "Always ask");
+  overlay.stop();
+  assert.equal(theme.querySelector('span:not([aria-hidden])').textContent, "Theme");
   dom.window.close();
 });

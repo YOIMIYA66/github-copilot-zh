@@ -81,6 +81,7 @@ function fixture() {
         <div role="option">Last 2 days</div>
         <div role="option">Last 365 days</div>
         <div role="option">Last 2 day</div>
+        <div role="option">Last 7 days</div>
       </div>
       <div role="menu" aria-labelledby="approvals"><div role="menuitem">Approve all</div></div>
       <div role="menu" aria-labelledby="unrelated">
@@ -88,11 +89,13 @@ function fixture() {
         <div role="menuitem"><span>Update authorization</span></div>
         <div role="menuitem"><span>Manage plan</span></div>
         <div role="menuitem"><span>Remove account</span></div>
+        <div role="menuitem"><span>Set as default</span></div>
       </div>
       <div role="menu" id="account-actions-menu" aria-labelledby="account-actions-trigger">
         <div role="menuitem"><span>Update authorization</span></div>
         <div role="menuitem"><a href="https://example.invalid/plan"><span>Manage plan</span><svg aria-hidden="true">↗</svg></a></div>
         <div role="menuitem" class="destructive"><span>Remove account</span></div>
+        <div role="menuitem"><span>Set as default</span></div>
     </div></div></body>`);
   const paragraph = dom.window.document.getElementById("split");
   for (const text of ["Show the GitHub Copilot icon in the ", "system tray", "."]) {
@@ -110,7 +113,7 @@ test("translates only fixed settings labels and owned popup options", async () =
   assert.equal(document.querySelector("#nav-option-account span").textContent, "账户");
   assert.equal(document.querySelector('[id="nav-option-project%3Afictional"] span').textContent, "Accounts");
   assert.equal(document.querySelector("#nav-option-computer-use button").textContent, "计算机使用预览");
-  assert.equal(document.querySelector("#update-status").textContent, "已是最新版本。上次检查：November 15, 2026, at 11:47 AM。");
+  assert.equal(document.querySelector("#update-status").textContent, "Up to date. Last checked on November 15, 2026, at 11:47 AM.");
   assert.equal(document.querySelector('[data-section-id="general-about"] h3').textContent, "GitHub v1.4.2");
   assert.equal(document.querySelector("[data-settings-topbar] h1").textContent, "常规");
   assert.equal(document.querySelector("[data-settings-topbar] button").getAttribute("aria-label"), "关闭对话框");
@@ -133,11 +136,11 @@ test("translates only fixed settings labels and owned popup options", async () =
   assert.equal(document.querySelector("#position-list [role=option]").textContent, "右上角");
   assert.deepEqual([...document.querySelectorAll("#session-window-list [role=option]")].map(node =>
     [node.textContent, node.getAttribute("aria-selected")]), [
-    ["最近 1 天", "true"], ["最近 2 天", null], ["最近 365 天", null], ["Last 2 day", null]
+    ["Last 1 day", "true"], ["Last 2 days", null], ["Last 365 days", null], ["Last 2 day", null], ["最近 7 天", null]
   ]);
   assert.equal(document.querySelector("#other-list [role=option]").textContent, "Top right");
   assert.deepEqual([...document.querySelectorAll('[aria-labelledby="unrelated"] [role=menuitem]')].map(node => node.textContent),
-    ["Approve all", "Update authorization", "Manage plan", "Remove account"]);
+    ["Approve all", "Update authorization", "Manage plan", "Remove account", "Set as default"]);
   document.querySelector("#approvals").setAttribute("aria-expanded", "false");
   await waitFor(() => document.querySelector('[aria-labelledby="approvals"] [role=menuitem]').textContent === "Approve all");
   assert.equal(document.querySelector("#chat").textContent, "GeneralThinking");
@@ -148,7 +151,7 @@ test("translates only fixed settings labels and owned popup options", async () =
   assert.match(document.querySelector('[data-settings-scroll][aria-label="Accounts"] p').textContent, /^除非在仓库设置/);
   assert.equal(document.querySelector('[data-settings-scroll][aria-label="Accounts"] li h2').textContent, "Connected accounts");
   assert.deepEqual([...document.querySelectorAll("#account-actions-menu [role=menuitem]")].map(node => node.textContent),
-    ["更新授权", "管理订阅计划↗", "移除账号"]);
+    ["更新授权", "管理订阅计划↗", "移除账号", "设为默认"]);
   assert.equal(document.querySelector("#account-actions-menu a").getAttribute("href"), "https://example.invalid/plan");
   assert.equal(document.querySelector("#account-actions-menu svg").textContent, "↗");
   assert.equal(document.querySelector('[data-settings-scroll][aria-label="Accounts"] li span').textContent, "fictional-account");
@@ -163,11 +166,11 @@ test("translates only fixed settings labels and owned popup options", async () =
   await waitFor(() => document.querySelector("#account-actions-menu [role=menuitem]").textContent === "更新授权");
   overlay.stop();
   assert.deepEqual([...document.querySelectorAll("#account-actions-menu [role=menuitem]")].map(node => node.textContent),
-    ["Update authorization", "Manage plan↗", "Remove account"]);
+    ["Update authorization", "Manage plan↗", "Remove account", "Set as default"]);
   dom.window.close();
 });
 
-test("update status translation requires the exact settings structure and date pattern", async () => {
+test("dynamic update timestamps stay unchanged in settings and chat", async () => {
   const { dom, document } = fixture();
   const status = document.querySelector("#update-status");
   const original = status.textContent;
@@ -175,7 +178,8 @@ test("update status translation requires the exact settings structure and date p
   other.textContent = original;
   document.querySelector("#chat").append(other);
   const overlay = startSettingsTranslation(document, dictionary);
-  await waitFor(() => status.textContent.startsWith("已是最新版本"));
+  await waitFor(() => document.querySelector("#wsl").textContent === "WSL 主机");
+  assert.equal(status.textContent, original);
   status.firstChild.nodeValue = "Up to date. Last checked on 2026-11-15.";
   await settle();
   assert.equal(status.textContent, "Up to date. Last checked on 2026-11-15.");

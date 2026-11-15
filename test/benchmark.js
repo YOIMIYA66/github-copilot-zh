@@ -4,10 +4,14 @@ import { dictionary } from "../src/dictionary.js";
 import { startSettingsTranslation } from "../src/overlay.js";
 
 const dom = new JSDOM(`<body><main data-app-shell-main data-f6-nav><div data-testid="conversation-root">
-  <aside data-sidebar-root><div data-testid="sidebar-floating-surface"><div data-testid="sidebar-scroll-viewport">
+  <aside data-sidebar-root data-sidebar-live-width><div data-testid="sidebar-floating-surface"><div data-testid="sidebar-scroll-viewport"><div>
     <nav aria-labelledby="quick-links-heading"><h2 id="quick-links-heading">Quick links</h2><ul>
-      <li><button><span>Automations</span></button></li><li><button><span>Customize</span></button></li>
-    </ul></nav></div><nav data-sidebar-footer></nav></div></aside>
+      <li><button data-sidebar-nav-item="home" data-command="navigation.home" data-sidebar-file-drop-kind="new"><span>New</span></button></li>
+      <li><button data-sidebar-nav-item="pulls" data-command="navigation.pulls"><span>Pull requests</span></button></li>
+      <li><button data-sidebar-nav-item="issues" data-command="navigation.issues"><span>Issues</span></button></li>
+      <li><button data-sidebar-nav-item="workflows" data-command="navigation.automations"><span>Automations</span></button></li>
+      <li><button data-sidebar-nav-item="extensions" data-command="navigation.customize"><span>Customize</span></button></li>
+    </ul></nav></div><ul><li><button>Fictional session</button></li></ul></div><nav data-sidebar-footer></nav></div></aside>
   <div data-testid="conversation-composer-area"><div data-testid="composer-pills">
     <button data-testid="background-activity-pill" aria-controls="background-activity-list"><span>Background</span><span>0</span></button>
     <button data-testid="artifact-files-pill" aria-controls="artifact-files-list"><span>Artifacts</span><span>0</span></button>
@@ -90,5 +94,21 @@ await run("unverified Automations page present");
 page.remove();
 await wait();
 await run("work pages removed");
+const sidebarLabels = [...document.querySelectorAll('[data-sidebar-nav-item] span')].map(node => node.firstChild);
+const originals = ["New", "Pull requests", "Issues", "Automations", "Customize"];
+const sidebarBefore = overlay.stats.chromeScans;
+const batchesBefore = overlay.stats.batchMs.length;
+const callbackSamplesBefore = overlay.stats.callbackMs.length;
+const sidebarStart = performance.now();
+for (let batch = 0; batch < 100; batch++) {
+  sidebarLabels.forEach((node, index) => { node.nodeValue = originals[index]; });
+  await wait();
+}
+while (sidebarLabels[4].nodeValue !== "扩展中心") await wait();
+console.log(JSON.stringify({ label: "sidebar label updates", controls: 5, updates: 500,
+  chromeScans: overlay.stats.chromeScans - sidebarBefore,
+  elapsedMs: Number((performance.now() - sidebarStart).toFixed(2)),
+  drainBatches: summarize(overlay.stats.batchMs.slice(batchesBefore)),
+  observerCallbacks: summarize(overlay.stats.callbackMs.slice(callbackSamplesBefore)) }));
 overlay.stop();
 dom.window.close();

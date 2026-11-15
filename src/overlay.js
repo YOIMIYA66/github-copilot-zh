@@ -16,7 +16,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "sessions-close-terminal-confirmation", "sessions-edit-message-confirmation",
     "sessions-retry-response-confirmation", "sessions-cli-sessions",
     "sessions-session-lifecycle", "accessibility-display",
-    "accessibility-notifications",
+    "accessibility-notifications", "accessibility-announcements",
     "accessibility-keyboard-shortcuts-toggle", "accessibility-keyboard",
     "accessibility-conversation-transcript", "voice-mode-input-device",
     "voice-mode-shortcut", "voice-mode-recording-behavior",
@@ -47,31 +47,47 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "model-providers-providers": ["Add provider"]
   };
   const chromeWords = {
-    sidebar: ["Manage accounts", "Manage sessions", "Theme", "Keyboard shortcuts", "Health check",
+    sidebar: ["Manage accounts", "Switch account", "Manage sessions", "Theme", "Keyboard shortcuts", "Health check",
       "What's new", "About", "Help center", "Sign out"],
     sidebarTheme: ["System", "Light", "Dark", "Open themes settings"],
     composerMode: ["Mode", "Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption", "Tool permissions", "Approve all"],
     composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted"],
     composerModel: ["Effort level", "Learn more",
-      "Prioritizes capable models for challenging tasks and deeper reasoning.", "30% discount until Nov 30"],
+      "Prioritizes capable models for challenging tasks and deeper reasoning."],
     composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"]
   };
-  const accountActionWords = ["Update authorization", "Manage plan", "Remove account"];
+  const accountActionWords = ["Update authorization", "Manage plan", "Remove account", "Set as default"];
   const permissionTitles = { Assisted: "辅助模式", "Approve all": "全部允许" };
+  const sidebarNavigationSelector = '[data-sidebar-live-width] > div > [data-testid="sidebar-scroll-viewport"] > div > nav';
+  const sidebarBoundarySelectors = [
+    "[data-sidebar-live-width]", "[data-sidebar-live-width] > div",
+    '[data-sidebar-live-width] > div > [data-testid="sidebar-scroll-viewport"]',
+    '[data-sidebar-live-width] > div > [data-testid="sidebar-scroll-viewport"] > div'
+  ];
+  const sidebarItems = {
+    home: { command: "navigation.home", label: "New" },
+    pulls: { command: "navigation.pulls", label: "Pull requests" },
+    issues: { command: "navigation.issues", label: "Issues" },
+    workflows: { command: "navigation.automations", label: "Automations" },
+    extensions: { command: "navigation.customize", label: "Customize" }
+  };
   const chromeRootSelectors = [
     'nav[aria-labelledby="quick-links-heading"]', "[data-sidebar-footer]",
-    '[data-testid="composer-pills"]', "[data-rich-composer-footer]"
+    '[data-testid="composer-pills"]', "[data-rich-composer-footer]", sidebarNavigationSelector
   ];
+  const sidebarBoundaryObservers = new Map();
+  const sidebarNavigationRoots = new WeakSet();
   const themeSectionIds = new Set(["general-theme", "themes-mode", "themes-terminal"]);
-  const sessionWindowPattern = /^Last ([1-9]\d{0,2}) (day|days)$/;
   const chromeRoots = new Set();
   const chromeRootObservers = new Map();
   const mainRoot = document.querySelector("main[data-app-shell-main][data-f6-nav]");
   const chromeObserverOptions = {
     subtree: true, childList: true, characterData: true, attributes: true,
     attributeFilter: ["aria-expanded", "aria-controls", "aria-haspopup", "aria-labelledby", "aria-label",
-      "id", "role", "data-testid", "data-open", "data-rootownerid"]
+      "id", "role", "data-testid", "data-open", "data-rootownerid",
+      "data-sidebar-nav-item", "data-command", "data-sidebar-file-drop-kind",
+      "data-user-content", "contenteditable"]
   };
   const splitPatterns = [
     { section: "general-tray-menu", tag: "P", parents: ["P", "P", "P"],
@@ -119,6 +135,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function addChromeRoot(root) {
     if (chromeRoots.has(root)) return;
+    if (root.matches(sidebarNavigationSelector)) sidebarNavigationRoots.add(root);
     chromeRoots.add(root);
     const rootObserver = new document.defaultView.MutationObserver(mutations);
     rootObserver.observe(root, chromeObserverOptions);
@@ -131,15 +148,40 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       if (scope.nodeType === 1 && scope.matches(selector)) addChromeRoot(scope);
       for (const root of scope.querySelectorAll(selector)) addChromeRoot(root);
     }
+    if (scope.nodeType === 1 && scope.matches("[data-sidebar-live-width]")) discoverSidebarNavigation(scope);
+    for (const sidebar of scope.querySelectorAll("[data-sidebar-live-width]")) discoverSidebarNavigation(sidebar);
+  }
+
+  function discoverSidebarNavigation(sidebar) {
+    let containers = [sidebar];
+    for (const selector of ["div", '[data-testid="sidebar-scroll-viewport"]', "div", "nav"]) {
+      const children = [];
+      for (const container of containers) {
+        if (!sidebarBoundaryObservers.has(container)) {
+          const boundaryObserver = new document.defaultView.MutationObserver(mutations);
+          boundaryObserver.observe(container, { childList: true, attributes: true,
+            attributeFilter: ["data-sidebar-live-width", "data-testid"] });
+          sidebarBoundaryObservers.set(container, boundaryObserver);
+        }
+        for (const child of container.children) if (child.matches(selector)) children.push(child);
+      }
+      containers = children;
+    }
+    for (const nav of containers) addChromeRoot(nav);
   }
 
   function removeDisconnectedChromeRoots() {
     for (const root of chromeRoots) {
-      if (root.isConnected) continue;
+      if (root.isConnected && (!sidebarNavigationRoots.has(root) || root.matches(sidebarNavigationSelector))) continue;
       chromeRootObservers.get(root)?.disconnect();
       chromeRootObservers.delete(root);
       chromeRoots.delete(root);
       restorePopup(root);
+    }
+    for (const [container, boundaryObserver] of sidebarBoundaryObservers) {
+      if (container.isConnected && sidebarBoundarySelectors.some(selector => container.matches(selector))) continue;
+      boundaryObserver.disconnect();
+      sidebarBoundaryObservers.delete(container);
     }
   }
 
@@ -157,10 +199,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   }
 
   function isSettingsChoice(section, text) {
-    if (!Object.hasOwn(popupWords, section)) return false;
-    if (popupWords[section].includes(text)) return true;
-    const match = section === "sessions-cli-sessions" && sessionWindowPattern.exec(text);
-    return !!match && ((match[1] === "1") === (match[2] === "day"));
+    return Object.hasOwn(popupWords, section) && popupWords[section].includes(text);
   }
 
   function chromeMenuKind(trigger) {
@@ -179,27 +218,34 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         !parentMenu.parentElement.parentElement?.matches("[data-base-ui-portal]")) return null;
     const item = trigger.closest('[role="menuitem"]');
     if (!item || item.closest('[role="menu"]') !== parentMenu) return null;
-    const label = item.textContent.trim();
+    const label = visibleMenuLabel(item);
     if (parentKind === "sidebar" && (label === "Theme" || label === dictionary.Theme)) return "sidebarTheme";
     if (parentKind === "composerMode" &&
         (label === "Tool permissions" || label === dictionary["Tool permissions"])) return "composerPermissions";
     return null;
   }
 
+  function visibleMenuLabel(item) {
+    const walker = document.createTreeWalker(item, 4);
+    let label = "";
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!node.parentElement.closest('[aria-hidden="true"],[hidden],kbd')) label += node.nodeValue;
+    }
+    return label.trim();
+  }
+
   function chromePopupText(owner, element, text) {
     if (!owner || !element) return false;
-    if (owner.kind === "sidebar") {
+    if (owner.kind === "sidebar" || owner.kind === "settingsAccountActions") {
+      const item = element.closest('[role="menuitem"]');
       return owner.words.includes(text) &&
-        !!element.closest('[role="menuitem"]') &&
-        element.parentElement?.tagName === "SPAN";
+        !!item && item.closest('[role="menu"]') === owner.popup &&
+        (element.matches("span,button") || element === item);
     }
     if (owner.kind === "sidebarTheme") {
       return owner.words.includes(text) &&
         (!!element.closest('[role="menuitem"],[role="menuitemradio"]'));
-    }
-    if (owner.kind === "settingsAccountActions") {
-      return accountActionWords.includes(text) &&
-        element.tagName === "SPAN" && !!element.closest('[role="menuitem"]');
     }
     if (owner.kind === "composerPermissions") {
       return owner.words.includes(text) &&
@@ -208,8 +254,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     }
     if (owner.kind === "composerModelDetails") {
       return element.tagName === "P" &&
-        (text === "Prioritizes capable models for challenging tasks and deeper reasoning." ||
-          /^\d+(?:\.\d+)?% discount until Nov \d{1,2}$/.test(text));
+        text === "Prioritizes capable models for challenging tasks and deeper reasoning.";
     }
     if (["Step-by-step collaboration", "Plan first, execute when ready",
       "End-to-end execution without interruption"].includes(text)) {
@@ -218,7 +263,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (text === "Mode") {
       if (owner.kind !== "composerMode") return false;
       const title = element.closest("[id]");
-      return !!title && title.textContent.trim() === "Mode" &&
+      const label = title && visibleMenuLabel(title);
+      return !!title && (label === "Mode" || label === dictionary.Mode) &&
         [...owner.popup.querySelectorAll('[role="group"][aria-labelledby]')]
           .some(group => group.getAttribute("aria-labelledby") === title.id);
     }
@@ -227,21 +273,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (text === "Prioritizes capable models for challenging tasks and deeper reasoning.") {
       return owner.kind === "composerModelDetails" && element.tagName === "P";
     }
-    if (owner.kind === "composerModel" && /^\d+(?:\.\d+)?% discount until Nov \d{1,2}$/.test(text)) {
-      return !!element.closest('[role="none"] span[id]');
-    }
     if (owner.kind === "composerContext") {
       return owner.words.includes(text) && !!element.closest('[role="menuitem"]');
     }
     return owner.words.includes(text) && !!element.closest('[role="menuitem"]');
-  }
-
-  function creditsText(owner, node, text) {
-    if (owner?.kind !== "sidebar" || !/^AI credits used: \d+(?:\.\d+)?%$/.test(text)) return false;
-    const inner = node.parentElement;
-    const outer = inner?.parentElement;
-    return inner?.tagName === "SPAN" && inner.childNodes.length === 1 && inner.firstChild === node &&
-      outer?.tagName === "SPAN" && owner.popup.contains(outer);
   }
 
   function observeChromePopup(popup) {
@@ -283,6 +318,14 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function isChromeText(element, text) {
     const root = chromeRootFor(element);
     if (!root) return false;
+    if (root.matches(sidebarNavigationSelector)) {
+      const button = element.closest("nav > ul > li > button[data-sidebar-nav-item][data-command]");
+      if (!button || button.closest("nav") !== root) return false;
+      const item = button.getAttribute("data-sidebar-nav-item");
+      const fixed = Object.hasOwn(sidebarItems, item) && sidebarItems[item];
+      return !!fixed && fixed.label === text && button.getAttribute("data-command") === fixed.command &&
+        (item !== "home" || button.getAttribute("data-sidebar-file-drop-kind") === "new");
+    }
     if (root.matches('nav[aria-labelledby="quick-links-heading"]')) {
       return ["Automations", "Customize"].includes(text) &&
         !!element.closest("li > button") && root.contains(element.closest("li > button"));
@@ -374,39 +417,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     return false;
   }
 
-  function isUpdateStatus(element) {
-    if (!element.matches('p[id]') || element.childNodes.length !== 1 ||
-        element.firstChild.nodeType !== 3 ||
-        !element.closest('[data-section-id="general-about"]')) return false;
-    const heading = element.previousElementSibling;
-    return !!heading && heading.tagName === "H3" &&
-      /^GitHub v\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(heading.textContent.trim());
-  }
-
   function specialTranslation(node, text) {
     const element = node.parentElement;
-    const popup = ownedPopup(element);
-    if (creditsText(popup, node, text)) {
-      const credits = /^AI credits used: (\d+(?:\.\d+)?)%$/.exec(text);
-      if (credits) return `AI 点数已使用：${credits[1]}%`;
-    }
-    if (popup?.kind === "composerModel" || popup?.kind === "composerModelDetails") {
-      const discount = /^(\d+(?:\.\d+)?)% discount until (Nov \d{1,2})$/.exec(text);
-      if (discount) return `优惠 ${discount[1]}%，截止至 ${discount[2].replace("Nov ", "11 月 ")} 日`;
-    }
-    if (popup?.kind === "settings" && popup.section === "sessions-cli-sessions") {
-      const sessionWindow = sessionWindowPattern.exec(text);
-      if (sessionWindow && ((sessionWindow[1] === "1") === (sessionWindow[2] === "day"))) {
-        return `最近 ${sessionWindow[1]} 天`;
-      }
-    }
     if (text === "Preview" &&
         element.matches('li[id$="-option-computer-use"] > button > div[data-trailing-visual] > span')) {
       return "预览";
     }
-    if (!isUpdateStatus(element)) return null;
-    const match = /^Up to date\. Last checked on ((?:January|February|March|April|May|June|July|August|September|October|November|December) (?:[1-9]|[12]\d|3[01]), \d{4}, at (?:[1-9]|1[0-2]):[0-5]\d (?:AM|PM))\.$/.exec(text);
-    return match ? `已是最新版本。上次检查：${match[1]}。` : null;
+    return null;
   }
 
   function isFixedAction(element, text) {
@@ -492,18 +509,17 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function eligible(node) {
     const element = node.parentElement;
     if (!element || !node.isConnected || (dialog && !dialog.isConnected)) return false;
-    if (element.closest('[data-section-id="accessibility-announcements"]')) return false;
     if (element.closest("input,textarea,select,code,kbd,samp,pre,[contenteditable],[data-user-content]")) return false;
     const scroll = element.closest("[data-settings-scroll]");
     if (scroll && !scroll.hasAttribute("aria-label")) return false;
     const prior = tracked.get(node);
     const text = (prior && node.nodeValue === prior.translated ? prior.original : node.nodeValue).trim();
     if (dialog?.contains(element) && (isNavLabel(element) || isFixedRowText(element) || isFixedHeader(element) ||
-        isFixedChoice(element, text) || isFixedAction(element, text) || isUpdateStatus(element))) return true;
+        isFixedChoice(element, text) || isFixedAction(element, text))) return true;
     if (isChromeText(element, text)) return true;
     const owner = ownedPopup(element);
     if (owner?.kind === "settings") return isSettingsChoice(owner.section, text);
-    return chromePopupText(owner, element, text) || creditsText(owner, node, text);
+    return chromePopupText(owner, element, text);
   }
 
   function restore(node, entry) {
@@ -624,6 +640,18 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function scan(node, kind) {
     if (!node) return;
+    if (kind === "portal" && (node.nodeType === 1 || node.nodeType === 3)) {
+      const element = node.nodeType === 3 ? node.parentElement : node;
+      const owner = ownedPopup(element);
+      if (owner?.kind === "sidebar" && !element.closest('[role="menuitem"]')) {
+        if (node.nodeType === 1) {
+          for (const item of node.querySelectorAll('[role="menuitem"]')) {
+            if (item.closest('[role="menu"]') === owner.popup) scan(item, kind);
+          }
+        }
+        return;
+      }
+    }
     if (kind === "settings") stats.settingsScans++;
     else if (kind === "chrome") stats.chromeScans++;
     else stats.portalScans++;
@@ -732,6 +760,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const changedText = new Set();
     let ownershipChanged = false;
     for (const record of records) {
+      if (sidebarBoundaryObservers.has(record.target)) {
+        ownershipChanged = true;
+        const sidebar = record.target.closest("[data-sidebar-live-width]");
+        if (sidebar) discoverSidebarNavigation(sidebar);
+        removeDisconnectedChromeRoots();
+        continue;
+      }
       if (!dialog && record.type === "childList" &&
           (record.target === portal || [...record.addedNodes].some(node => node === portal))) {
         for (const node of record.addedNodes) {
@@ -803,6 +838,11 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
             record.target.hasAttribute("data-settings-scroll") && record.target.hasAttribute("aria-label")) {
           scan(record.target, "settings");
         }
+        if (chromeRootFor(record.target) &&
+            ["data-command", "data-sidebar-nav-item", "data-sidebar-file-drop-kind",
+              "data-user-content", "contenteditable"].includes(record.attributeName)) {
+          scan(record.target, "chrome");
+        }
       }
     }
     for (const node of changedText) {
@@ -850,6 +890,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       chromeRootObservers.clear();
       for (const popupObserver of chromePopupObservers.values()) popupObserver.disconnect();
       chromePopupObservers.clear();
+      for (const boundaryObserver of sidebarBoundaryObservers.values()) boundaryObserver.disconnect();
+      sidebarBoundaryObservers.clear();
       restoreTracked();
       dialog = null;
     }

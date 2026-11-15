@@ -131,6 +131,8 @@ test("translates observed fixed settings while preserving code, shortcuts and pe
   assert.equal(document.querySelector('[data-section-id="themes-mode"] > button').textContent, "Dark");
   assert.equal(document.querySelector('[data-section-id="themes-palette"] li').textContent, "Palettes");
   assert.deepEqual([...document.querySelectorAll("#shortcut kbd")].map(e => e.textContent), ["⇧", "⇥"]);
+  assert.equal(document.querySelector('[data-section-id="accessibility-keyboard-shortcuts-toggle"] p').textContent,
+    "将 Copilot 设置为 Interactive、Plan 或 Autopilot 模式。需要启用键盘快捷键。");
   assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] h2').textContent, "输入设备");
   assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] p').textContent, "选择语音听写录音时使用的麦克风。");
   assert.equal(document.querySelector('[data-section-id="voice-mode-input-device"] button').textContent, "Personal microphone");
@@ -142,13 +144,15 @@ test("translates observed fixed settings while preserving code, shortcuts and pe
   dom.window.close();
 });
 
-test("session activity announcements remain English without changing switches or other settings", async () => {
+test("translates session activity settings while preserving switches and excluding chat activity", async () => {
   const { dom, document } = fixture();
   const page = document.querySelector('[data-settings-scroll][aria-label="Accessibility"]');
   const section = document.createElement("section");
   section.setAttribute("data-section-id", "accessibility-announcements");
-  const labels = ["Reasoning", "Tool calls", "Code search", "Read files", "Create files", "Edit files",
-    "Run CLI commands", "CLI command completed", "Switch models and agents", "Compact conversation context"];
+  const labels = ["Reasoning", "Tool calls", "Code search", "Reading files", "Creating files", "Editing files",
+    "Running CLI commands", "CLI commands finish running", "Changing models and agents", "Compacting the conversation"];
+  const translatedLabels = ["推理", "工具调用", "代码搜索", "读取文件", "创建文件", "编辑文件",
+    "运行 CLI 命令", "CLI 命令运行完成", "切换模型和代理", "压缩对话上下文"];
   section.innerHTML = `<h2>Session activity announcements</h2><p>Set what types of Copilot activity are announced.</p>${
     labels.map((label, index) => `<div data-settings-row><div><h3>${label}</h3></div>
       <button role="switch" aria-checked="${index % 2 === 0}"><span class="sr-only">${index % 2 === 0 ? "On" : "Off"}</span></button>
@@ -159,21 +163,27 @@ test("session activity announcements remain English without changing switches or
   other.setAttribute("data-section-id", "accessibility-notifications");
   other.innerHTML = '<div data-settings-row><button role="switch" aria-checked="true"><span class="sr-only">On</span></button><span data-switch-state-label>On</span></div>';
   page.append(other);
-  const original = section.innerHTML;
+  document.querySelector("main").textContent = "Reasoning · Thinking… · Thought for 2 seconds · Sent message to user";
   const overlay = startSettingsTranslation(document, dictionary);
-  await waitFor(() => other.querySelector("[data-switch-state-label]").textContent === "开启");
-  assert.equal(section.innerHTML, original);
+  await waitFor(() => [...section.querySelectorAll("[data-switch-state-label]")].at(-1).textContent === "关闭");
+  assert.equal(section.querySelector("h2").textContent, "会话活动播报");
+  assert.equal(section.querySelector("p").textContent, "设置要播报的 Copilot 活动类型。");
+  assert.deepEqual([...section.querySelectorAll("h3")].map(node => node.textContent), translatedLabels);
+  assert.deepEqual([...section.querySelectorAll("[data-switch-state-label]")].map(node => node.textContent),
+    labels.map((_, index) => index % 2 === 0 ? "开启" : "关闭"));
+  assert.equal(document.querySelector("main").textContent,
+    "Reasoning · Thinking… · Thought for 2 seconds · Sent message to user");
   const heading = section.querySelector("h3");
-  heading.firstChild.nodeValue = "On";
-  await new Promise(resolve => setTimeout(resolve, 10));
-  assert.equal(heading.textContent, "On");
+  heading.firstChild.nodeValue = "Tool calls";
+  await waitFor(() => heading.textContent === "工具调用");
   assert.deepEqual([...section.querySelectorAll('[role="switch"]')].map(node => node.getAttribute("aria-checked")),
     labels.map((_, index) => String(index % 2 === 0)));
-  other.setAttribute("data-section-id", "accessibility-announcements");
+  other.setAttribute("data-section-id", "unverified-section");
   await waitFor(() => other.querySelector("[data-switch-state-label]").textContent === "On");
   assert.equal(other.querySelector('[role="switch"]').getAttribute("aria-checked"), "true");
   overlay.stop();
   assert.equal(section.querySelector("h2").textContent, "Session activity announcements");
+  assert.equal(heading.textContent, "Tool calls");
   assert.equal(other.querySelector("[data-switch-state-label]").textContent, "On");
   dom.window.close();
 });
