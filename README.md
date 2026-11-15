@@ -45,12 +45,14 @@
 
 | 合成基准场景 | 采样指标 | 结果数据 |
 | :--- | :--- | :--- |
-| **5,000 个合成聊天节点、1,000 次聊天更新（设置关闭）** | 设置扫描 / 固定界面扫描；本次耗时 | `0` / `0`；约 `197.76 ms` |
-| **5,000 个合成聊天节点、1,000 次聊天更新（设置打开）** | 设置扫描 / 固定界面扫描；本次耗时 | `0` / `0`；约 `199.97 ms` |
-| **1,201 个合成设置元素（300 行），首次翻译至末项完成** | 加入设置窗口至末项翻译完成 | 约 `179.04 ms` |
-| **1,201 个合成设置元素、1,000 次设置标签更新** | 处理批次 p95/最大值；观察器回调 p95/最大值 | `4.02/4.28 ms`；`0.09/4.05 ms` |
+| **5,000 个合成聊天节点、1,000 次聊天更新（设置关闭）** | 设置扫描 / 固定界面扫描；本次耗时 | `0` / `0`；约 `198.23 ms` |
+| **5,000 个合成聊天节点、1,000 次聊天更新（设置打开）** | 设置扫描 / 固定界面扫描；本次耗时 | `0` / `0`；约 `229.63 ms` |
+| **1,201 个合成设置元素（300 行），首次翻译至末项完成** | 加入设置窗口至末项翻译完成 | 约 `154.37 ms` |
+| **1,201 个合成设置元素、1,000 次设置标签更新** | 处理批次 p95/最大值；观察器回调 p95/最大值 | `4.06/4.19 ms`；`0.09/2.01 ms` |
 
 以上是单次 Node/JSDOM 合成运行样本；耗时会随机器和负载变化，不能与真实 WebView2 或页面渲染耗时等同。
+
+**WebView2 实机诊断附加样本（GitHub Copilot desktop 1.4.2，单次）**：在当前运行的 app 上验证了诊断版安装、`stop` 还原和 `measure: false` 普通版重新注入；未重启 app、未改输入或菜单选值。菜单交互前后各约 8 秒的关闭态样本中，`settingsScans`、`portalScans`、`chromeScans`、`callbacks` 增量均为 `0`。原生输入分别打开并关闭四个菜单一次后，增量为 `0/12/20/23`；处理批次共 5 个（p95/最大 `1.40 ms`，总计 `3.60 ms`），回调共 26 个（p95 `0.30 ms`、最大 `0.40 ms`，总计 `2.50 ms`）。菜单交互后的累计计数为 `settingsScans=0`、`portalScans=12`、`chromeScans=24`、`callbacks=26`（其中含初始 4 个 chrome 根扫描）。这些是 overlay 自身计时，不是全 app CPU、内存或 FPS 测量；样本很小，不代表普遍性能。此脚本只做菜单交互，没有合成聊天负载，也没有做逐句翻译覆盖验收。
 
 ---
 
@@ -66,7 +68,7 @@
 ### 🚀 安装与使用
 
 > [!NOTE]
-> 以下步骤使用源码预览版。正常启动器通过新启动应用完成整个流程尚未端到端验证。**运行前请先保存工作并正常退出 Copilot**；不要强制结束 Copilot，也不要关闭操作系统安全防护。
+> 以下步骤使用源码预览版。正常启动器通过新启动应用完成整个流程尚未端到端验证；启动等待阶段按 `Ctrl+C` 目前仍可能以非零退出码结束。**运行前请先保存工作并正常退出 Copilot**；不要强制结束 Copilot，也不要关闭操作系统安全防护。
 
 #### 1. 克隆并启动
 
@@ -178,10 +180,12 @@ Tooltips with unverified ownership remain in English. For example, the standalon
 
 | Synthetic Benchmark Scenario | Metric | Observed Value |
 | :--- | :--- | :--- |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `197.76 ms` |
-| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `199.97 ms` |
-| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `179.04 ms` |
-| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.02/4.28 ms`; `0.09/4.05 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings closed)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `198.23 ms` |
+| **5,000 synthetic chat nodes, 1,000 chat updates (Settings open)** | Settings scans / fixed-UI scans; elapsed in this run | `0` / `0`; about `229.63 ms` |
+| **1,201 synthetic Settings elements (300 rows), initial translation through last item** | From dialog insertion to last translation | About `154.37 ms` |
+| **1,201 synthetic Settings elements, 1,000 fixed-label updates** | Batch p95/max; observer callback p95/max | `4.06/4.19 ms`; `0.09/2.01 ms` |
+
+**WebView2 diagnostic-attachment sample (GitHub Copilot desktop 1.4.2, one run):** The diagnostic overlay was installed in the running app, stopped/restored, and replaced with the normal `measure: false` overlay; the app was not restarted, and no input or menu value was changed. In closed-menu samples of about eight seconds before and after the menu interactions, deltas for `settingsScans`, `portalScans`, `chromeScans`, and `callbacks` were all `0`. Opening and closing each of the four menus once with native input produced deltas of `0/12/20/23`; five processing batches measured p95/max `1.40 ms` and `3.60 ms` total, while 26 callbacks measured p95 `0.30 ms`, max `0.40 ms`, and `2.50 ms` total. Final cumulative counts were `settingsScans=0`, `portalScans=12`, `chromeScans=24`, and `callbacks=26` (including four initial chrome-root scans). These are overlay timings, not whole-app CPU, memory, or FPS measurements; the sample is small and not a general performance guarantee. This script exercised menus only, without synthetic chat load or a sentence-by-sentence translation coverage audit.
 
 ---
 
@@ -197,7 +201,7 @@ Tooltips with unverified ownership remain in English. For example, the standalon
 ### 🚀 Installation and Use
 
 > [!NOTE]
-> These steps use the source preview. The normal launcher has not yet been validated end to end with a newly started application. **Save your work and exit Copilot normally before running it.** Do not terminate Copilot forcibly or disable operating-system security.
+> These steps use the source preview. The normal launcher has not yet been validated end to end with a newly started application. During the startup wait, pressing `Ctrl+C` may still exit with a non-zero code. **Save your work and exit Copilot normally before running it.** Do not terminate Copilot forcibly or disable operating-system security.
 
 #### 1. Clone and Launch
 

@@ -46,7 +46,7 @@ export const diagnosticStatusExpression = `(() => {
   if (!state) return null;
   const stats = state.instance?.stats;
   return { measure: state.measure, started: !!state.instance, stats: stats ? {
-    settingsScans: stats.settingsScans, portalScans: stats.portalScans,
+    settingsScans: stats.settingsScans, portalScans: stats.portalScans, chromeScans: stats.chromeScans,
     callbacks: stats.callbacks, unmatchedFixedNodes: stats.unmatchedFixedNodes,
     batchMs: stats.batchMs.slice(), callbackMs: stats.callbackMs.slice()
   } : null };

@@ -3,7 +3,16 @@ import { JSDOM } from "jsdom";
 import { dictionary } from "../src/dictionary.js";
 import { startSettingsTranslation } from "../src/overlay.js";
 
-const dom = new JSDOM('<body><main id="chat"></main><div id="portal-root"></div></body>');
+const dom = new JSDOM(`<body><main data-app-shell-main data-f6-nav><div data-testid="conversation-root">
+  <aside data-sidebar-root><div data-testid="sidebar-floating-surface"><div data-testid="sidebar-scroll-viewport">
+    <nav aria-labelledby="quick-links-heading"><h2 id="quick-links-heading">Quick links</h2><ul>
+      <li><button><span>Automations</span></button></li><li><button><span>Customize</span></button></li>
+    </ul></nav></div><nav data-sidebar-footer></nav></div></aside>
+  <div data-testid="conversation-composer-area"><div data-testid="composer-pills">
+    <button data-testid="background-activity-pill" aria-controls="background-activity-list"><span>Background</span><span>0</span></button>
+    <button data-testid="artifact-files-pill" aria-controls="artifact-files-list"><span>Artifacts</span><span>0</span></button>
+  </div><div data-rich-composer-footer></div></div><div id="chat"></div>
+  </div></main><div id="portal-root"></div></body>`);
 const { document } = dom.window;
 const chat = document.querySelector("#chat");
 for (let i = 0; i < 5000; i++) {
@@ -15,11 +24,13 @@ const overlay = startSettingsTranslation(document, dictionary, { measure: true }
 const wait = () => new Promise(resolve => setTimeout(resolve, 0));
 async function run(label) {
   const before = overlay.stats.settingsScans;
+  const chromeBefore = overlay.stats.chromeScans;
   const started = performance.now();
   for (let i = 0; i < 1000; i++) chat.children[i].textContent = `Thinking ${i}`;
   await wait();
   console.log(JSON.stringify({ label, chatNodes: chat.children.length, updates: 1000,
     settingsScans: overlay.stats.settingsScans - before,
+    chromeScans: overlay.stats.chromeScans - chromeBefore,
     elapsedMs: Number((performance.now() - started).toFixed(2)) }));
 }
 await run("settings closed");
