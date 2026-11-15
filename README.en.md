@@ -51,8 +51,9 @@ This project translates selected fixed **Settings** text and verified static des
 | UI Area | Details |
 | :--- | :--- |
 | **Settings Dialog** | Navigation items, section headers, option titles, descriptions, update status copy, supported split paragraphs, and verified Settings listboxes/menus and action buttons |
-| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` navigation buttons, and Composer `Background` / `Artifacts` pill labels |
+| **Static Main-Window Controls** | Sidebar `Automations` / `Customize` (shown as “扩展中心”) navigation buttons, Composer `Background` / `Artifacts` labels, and exact fixed filter labels only on `role=tab` controls inside a `role=tablist` (e.g. PR filters Authored by me, Assigned to me, Involves me, Review requests, and Done) |
 | **Bidirectionally Verified Menus** | Fixed copy in the Composer **mode menu**, **tool-permissions submenu**, **model/reasoning details**, **add-context menu**, and sidebar **account menu** and its **theme submenu**, when trigger and menu IDs are verified |
+| **Fixed Settings Choices** | System/Light/Dark controls inside a known Themes settings section and `data-settings-row`, plus Last N day(s) options only in the owned `sessions-cli-sessions` dropdown |
 
 ### 🛡️ Untouched (explicitly excluded, never modified)
 
@@ -60,7 +61,7 @@ This project translates selected fixed **Settings** text and verified static des
 | :--- | :--- |
 | **Conversations & Workspace** | Chat messages, `Thinking` and other status labels, tool output, and workspace files/paths |
 | **Code & User Data** | Code blocks (`code`/`pre`), keyboard shortcuts (`kbd`), inputs and editable regions, user-provided names/paths/values, project/repository/profile data, and counts |
-| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and other tooltips with unverified ownership. Model/reasoning details are translated only while a verified model menu is open and the tooltip matches its dedicated details structure; no specific tier association is inferred. |
+| **Proper Names & Unverified Tooltips** | Mode names (`Interactive` / `Plan` / `Autopilot`), model and tier names, and other tooltips with unverified ownership. Model/reasoning details are translated only while a verified model menu is open and the tooltip matches its dedicated details structure; no specific tier association is inferred. PR/Issue filters are matched only within semantic `role=tablist` / `role=tab` controls; the specific Issue tabs have not been individually verified in the live app. |
 
 ---
 
@@ -138,6 +139,20 @@ failure or uncertainty and explain how to stop and restore the app.
 
 ## 🔍 How It Works & Project Structure
 
+### System Architecture
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/images/architecture-light.png">
+    <img alt="GitHub Copilot for Windows Localization Architecture" src="docs/images/architecture-light.png" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <sub>💡 Tip: Open <a href="docs/architecture.html"><b>docs/architecture.html</b></a> directly in your browser for the full interactive diagram (viewport zoom, theme toggle, trace animations, and exact source code references).</sub>
+</p>
+
 ### Lifecycle
 
 ```mermaid
@@ -158,6 +173,7 @@ flowchart LR
 ```text
 github-copilot-zh/
 ├── start.ps1                # PowerShell launcher (checks prerequisites, verifies signature, starts app)
+├── docs/                    # Project documentation & architecture exports (interactive HTML & HiDPI diagrams)
 ├── src/
 │   ├── runner.js            # Main runner (manages CDP lifecycle, script registration, and Ctrl+C cleanup)
 │   ├── connect.js           # Verified connector (runs verify-listener.ps1 before and after WebSocket open)

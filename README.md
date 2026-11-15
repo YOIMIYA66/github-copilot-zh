@@ -51,8 +51,9 @@
 | 适用区域 | 具体内容 |
 | :--- | :--- |
 | **设置对话框** | 设置导航栏、分类标题、选项标签、说明文本、更新状态提示、受支持的跨节点拆分段落，以及归属已验证的设置下拉框与操作按钮 |
-| **主界面静态控件** | 侧边栏 `Automations` / `Customize` 导航按钮、Composer 顶部的 `Background` / `Artifacts` 状态胶囊标签 |
+| **主界面静态控件** | 侧边栏 `Automations` / `Customize`（显示为“扩展中心”）导航按钮、Composer 顶部的 `Background` / `Artifacts` 标签，以及仅限 `role=tablist` 内固定筛选项的 `role=tab` 控件（如 PR 的 Authored by me、Assigned to me、Involves me、Review requests、Done） |
 | **双向关联弹出菜单** | 经触发器与菜单 ID 双向验证的 Composer **模式菜单**、**工具权限子菜单**、**模型与推理说明**、**添加上下文菜单**、侧边栏**账户菜单**及其**主题子菜单**固定文案 |
+| **设置内固定选择器** | Themes 的已知设置 section 中 `data-settings-row` 内 System / Light / Dark 控件；会话时间范围下拉框中仅限已归属 `sessions-cli-sessions` 的 Last N day(s) 选项 |
 
 ### 🛡️ 保留原文（显式排除，绝不修改）
 
@@ -60,7 +61,7 @@
 | :--- | :--- |
 | **对话与工作区** | 聊天正文、`Thinking`（思考）和其他状态标签、工具输出、工作区文件与路径 |
 | **代码与用户输入** | 代码块（`code`/`pre`）、键盘按键（`kbd`）、输入框与可编辑区域、用户自定义名称/路径/数值、项目/仓库/个人资料及各类计数 |
-| **专有名称与未知提示** | `Interactive` / `Plan` / `Autopilot` 模式名、模型与级别名称，以及归属无法确认的其他工具提示。模型推理详情仅在经验证的模型菜单同时打开且提示符合专用详情结构时翻译；不推断其对应的具体级别。 |
+| **专有名称与未知提示** | `Interactive` / `Plan` / `Autopilot` 模式名、模型与级别名称，以及归属无法确认的其他工具提示。模型推理详情仅在经验证的模型菜单同时打开且提示符合专用详情结构时翻译；不推断其对应的具体级别。PR/Issue 筛选仅在语义化 `role=tablist` / `role=tab` 结构中按精确文案匹配；具体 Issue 页签未在实机逐项验证。 |
 
 ---
 
@@ -134,6 +135,20 @@ https://github.com/YOIMIYA66/github-copilot-zh。
 
 ## 🔍 工作原理与项目结构
 
+### 系统架构
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/architecture-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/images/architecture-light.png">
+    <img alt="GitHub Copilot for Windows 汉化补丁系统架构图" src="docs/images/architecture-light.png" width="100%">
+  </picture>
+</p>
+
+<p align="center">
+  <sub>💡 提示：可直接在浏览器中打开 <a href="docs/architecture.html"><b>docs/architecture.html</b></a> 体验完整交互式架构图（支持多端视口缩放、主题切换、连线动效与源代码精准定位）。</sub>
+</p>
+
 ### 运行流程
 
 ```mermaid
@@ -154,6 +169,7 @@ flowchart LR
 ```text
 github-copilot-zh/
 ├── start.ps1                # PowerShell 启动器（环境检查、签名校验、分配回环调试端口并启动应用）
+├── docs/                    # 项目文档与系统架构导出（交互式 HTML 与高分辨率架构图）
 ├── src/
 │   ├── runner.js            # 主运行器（管理 CDP 连接生命周期、脚本注入与 Ctrl+C 退出还原）
 │   ├── connect.js           # 安全连接器（连接前后调用 verify-listener.ps1 执行双重校验）

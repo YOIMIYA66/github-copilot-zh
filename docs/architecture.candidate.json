@@ -1,0 +1,314 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "GitHub Copilot for Windows 汉化补丁系统架构",
+    "locale": "zh-CN",
+    "output": ".archify/architecture-github-copilot-zh-20261115-140800/github-copilot-zh-architecture.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/YOIMIYA66/github-copilot-zh.git",
+      "revision": "f0557e04440f9cc4d890bfef32e824bc50e78774"
+    }
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "开发者 / 终端用户",
+      "sublabel": "PowerShell 终端会话",
+      "icon": "person",
+      "pos": [40, 60],
+      "size": [130, 64]
+    },
+    {
+      "id": "launcher",
+      "type": "backend",
+      "label": "启动引导器",
+      "sublabel": "PowerShell 7+ (start.ps1)",
+      "tag": "环境校验与提权",
+      "pos": [270, 60],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "start.ps1",
+          "line": 1,
+          "end_line": 34,
+          "label": "环境校验与进程启动"
+        }
+      ]
+    },
+    {
+      "id": "runner",
+      "type": "backend",
+      "label": "守护主控进程",
+      "sublabel": "Node.js 运行时 (runner.js)",
+      "tag": "生命周期监控",
+      "pos": [270, 204],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/runner.js",
+          "line": 1,
+          "end_line": 72,
+          "label": "注入注册与退场清理"
+        }
+      ]
+    },
+    {
+      "id": "connector",
+      "type": "security",
+      "label": "CDP 握手连接器",
+      "sublabel": "connect.js (严格端点校验)",
+      "tag": "双重校验网关",
+      "pos": [270, 348],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/connect.js",
+          "line": 1,
+          "end_line": 34,
+          "label": "安全握手与端点筛选"
+        }
+      ]
+    },
+    {
+      "id": "verifier",
+      "type": "security",
+      "label": "安全签名与进程审计",
+      "sublabel": "verify-listener.ps1",
+      "tag": "微软/GitHub 签名 & 进程树",
+      "pos": [270, 492],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/verify-listener.ps1",
+          "line": 1,
+          "end_line": 37,
+          "label": "PID/父子进程链与签名审计"
+        }
+      ]
+    },
+    {
+      "id": "copilot_app",
+      "type": "frontend",
+      "label": "GitHub Copilot 客户端",
+      "sublabel": "github.exe (Tauri 宿主)",
+      "tag": "GitHub 数字签名",
+      "pos": [580, 60],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "start.ps1",
+          "line": 10,
+          "end_line": 20,
+          "label": "Copilot 宿主进程解析与签名验证"
+        }
+      ]
+    },
+    {
+      "id": "webview",
+      "type": "frontend",
+      "label": "WebView2 渲染引擎",
+      "sublabel": "msedgewebview2.exe",
+      "tag": "微软签名 / 隔离渲染",
+      "pos": [580, 204],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/verify-listener.ps1",
+          "line": 21,
+          "end_line": 36,
+          "label": "WebView2 子进程审计"
+        }
+      ]
+    },
+    {
+      "id": "cdp",
+      "type": "backend",
+      "label": "CDP 通信通道",
+      "sublabel": "Chrome DevTools 协议 (cdp.js)",
+      "tag": "127.0.0.1 动态端口",
+      "pos": [580, 348],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/cdp.js",
+          "line": 1,
+          "end_line": 72,
+          "label": "WebSocket 协议与目标筛选"
+        }
+      ]
+    },
+    {
+      "id": "dictionary",
+      "type": "database",
+      "label": "静态汉化映射字典",
+      "sublabel": "dictionary.js (高频术语库)",
+      "tag": "分词短语/正则模式",
+      "pos": [890, 60],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/dictionary.js",
+          "line": 1,
+          "end_line": 292,
+          "label": "菜单/选项/提示词静态映射"
+        }
+      ]
+    },
+    {
+      "id": "overlay",
+      "type": "frontend",
+      "label": "DOM 监听与文本替换",
+      "sublabel": "overlay.js (动态注入层)",
+      "tag": "双向映射 / 防循环扫描",
+      "pos": [890, 204],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/overlay.js",
+          "line": 1,
+          "end_line": 822,
+          "label": "MutationObserver 与 DOM 实时汉化"
+        }
+      ]
+    },
+    {
+      "id": "injection",
+      "type": "frontend",
+      "label": "脚本注入与退场挂载",
+      "sublabel": "injection.js (脚本生成与卸载)",
+      "tag": "Page.addScript & 探针",
+      "pos": [890, 348],
+      "size": [190, 64],
+      "sources": [
+        {
+          "path": "src/injection.js",
+          "line": 1,
+          "end_line": 124,
+          "label": "注入脚本包装与诊断探针"
+        }
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "安全启动与进程审计 (Launch & Security Guard)",
+      "wraps": ["launcher", "runner", "connector", "verifier"]
+    },
+    {
+      "kind": "region",
+      "label": "GitHub Copilot 桌面客户端宿主 (Host Runtime)",
+      "wraps": ["copilot_app", "webview", "cdp"]
+    },
+    {
+      "kind": "region",
+      "label": "内存汉化与 DOM 观察层 (In-Memory Localization Overlay)",
+      "wraps": ["dictionary", "overlay", "injection"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-launcher",
+      "from": "user",
+      "to": "launcher",
+      "label": "执行启动"
+    },
+    {
+      "id": "launcher-to-copilot",
+      "from": "launcher",
+      "to": "copilot_app",
+      "label": "注入调试参数并启动",
+      "variant": "emphasis"
+    },
+    {
+      "id": "launcher-to-runner",
+      "from": "launcher",
+      "to": "runner",
+      "label": "派生守护进程"
+    },
+    {
+      "id": "copilot-to-webview",
+      "from": "copilot_app",
+      "to": "webview",
+      "label": "托管渲染进程"
+    },
+    {
+      "id": "runner-to-connector",
+      "from": "runner",
+      "to": "connector",
+      "label": "轮询连接"
+    },
+    {
+      "id": "connector-to-verifier",
+      "from": "connector",
+      "to": "verifier",
+      "label": "进程链与签名审计",
+      "variant": "security"
+    },
+    {
+      "id": "connector-to-cdp",
+      "from": "connector",
+      "to": "cdp",
+      "label": "WebSocket 握手",
+      "variant": "security"
+    },
+    {
+      "id": "cdp-to-webview",
+      "from": "cdp",
+      "to": "webview",
+      "label": "附着 Target (Page/Frame)"
+    },
+    {
+      "id": "cdp-to-injection",
+      "from": "cdp",
+      "to": "injection",
+      "label": "CDP 脚本注入",
+      "variant": "emphasis"
+    },
+    {
+      "id": "injection-to-overlay",
+      "from": "injection",
+      "to": "overlay",
+      "label": "挂载覆盖脚本",
+      "variant": "emphasis"
+    },
+    {
+      "id": "overlay-to-dict",
+      "from": "overlay",
+      "to": "dictionary",
+      "label": "加载词条映射"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "无损注入与非破坏性架构",
+      "items": [
+        "零文件修改：不修改 github.exe 或 app.asar 二进制文件",
+        "标准调试管道：基于 Chrome DevTools Protocol 注入运行时观察脚本",
+        "热插拔退场：Ctrl+C 或关闭应用即彻底卸载，还原纯净环境"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "双重进程链与签名审计",
+      "items": [
+        "签名证书校验：严格验证 GitHub, Inc. 与 Microsoft Corporation 签名",
+        "网络边界隔离：强制锁定 127.0.0.1 本地回环与动态独占端口",
+        "进程树关系判定：递归审计 WebView2 是否属于目标 Copilot 派生子进程"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "DOM 响应式汉化引擎",
+      "items": [
+        "智能 MutationObserver：监听 DOM 子树增量变动，毫秒级局部补丁",
+        "双向映射防抖：避免替换后重复触发观察器导致无限循环",
+        "全量覆盖：深度支持设置界面、侧边栏菜单及 Composer 交互面板"
+      ]
+    }
+  ]
+}
