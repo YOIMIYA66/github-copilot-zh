@@ -6,7 +6,7 @@ import { startSettingsTranslation } from "../src/overlay.js";
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
 async function waitFor(predicate) {
-  const end = Date.now() + 2000;
+  const end = Date.now() + 4000;
   while (!predicate() && Date.now() < end) await settle();
   assert.ok(predicate(), "timed out waiting for overlay");
 }

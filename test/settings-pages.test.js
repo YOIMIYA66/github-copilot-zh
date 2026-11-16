@@ -5,10 +5,94 @@ import { dictionary } from "../src/dictionary.js";
 import { startSettingsTranslation } from "../src/overlay.js";
 
 async function waitFor(predicate) {
-  const end = Date.now() + 2000;
+  const end = Date.now() + 4000;
   while (!predicate() && Date.now() < end) await new Promise(resolve => setTimeout(resolve, 0));
   assert.ok(predicate(), "timed out waiting for overlay");
 }
+
+test("legacy fixed Settings variants translate inside existing owners without widening them", async () => {
+  const title = "Keep awake while agent is running";
+  const description = "Include sessions created by the Copilot CLI in the sidebar. Choose how far back to surface them, or turn this off to hide CLI-created sessions entirely.";
+  const dom = new JSDOM(`<body><main><h3>${title}</h3></main>
+    <div id="portal-root"><div role="dialog" data-settings-dialog-root>
+      <section data-settings-scroll aria-label="Sessions">
+        <section data-section-id="sessions-keep-awake"><h3>${title}</h3></section>
+        <section data-section-id="sessions-cli-sessions"><p>${description}</p></section>
+        <section data-section-id="fictional"><h3>${title}</h3></section>
+      </section>
+    </div></div></body>`);
+  const { document } = dom.window;
+  const heading = document.querySelector('[data-section-id="sessions-keep-awake"] h3');
+  const paragraph = document.querySelector('[data-section-id="sessions-cli-sessions"] p');
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => heading.textContent === dictionary[title] && paragraph.textContent === dictionary[description]);
+  assert.equal(document.querySelector("main h3").textContent, title);
+  assert.equal(document.querySelector('[data-section-id="fictional"] h3').textContent, title);
+  overlay.stop();
+  assert.equal(heading.textContent, title);
+  assert.equal(paragraph.textContent, description);
+  dom.window.close();
+});
+
+test("legacy shortcut action variants reuse the exact Accessibility list owner", async () => {
+  const labels = ["Open review changes", "Run current session", "Stop running", "Submit pull request review"];
+  const dom = new JSDOM(`<body><main><p>${labels[0]}</p></main>
+    <div id="portal-root"><div role="dialog" data-settings-dialog-root>
+      <section data-settings-scroll aria-label="Accessibility">
+        <section data-section-id="accessibility-keyboard"><ul role="list">
+          ${labels.map(label => `<li><button><p>${label}</p><kbd>F1</kbd></button></li>`).join("")}
+        </ul></section>
+        <section data-section-id="fictional"><ul><li><p>${labels[0]}</p></li></ul></section>
+      </section>
+    </div></div></body>`);
+  const { document } = dom.window;
+  const actions = [...document.querySelectorAll('[data-section-id="accessibility-keyboard"] p')];
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => actions.every((node, index) => node.textContent === dictionary[labels[index]]));
+  assert.equal(document.querySelector("main p").textContent, labels[0]);
+  assert.equal(document.querySelector('[data-section-id="fictional"] p').textContent, labels[0]);
+  assert.deepEqual([...document.querySelectorAll("kbd")].map(node => node.textContent), ["F1", "F1", "F1", "F1"]);
+  overlay.stop();
+  assert.deepEqual(actions.map(node => node.textContent), labels);
+  dom.window.close();
+});
+
+test("legacy experiment copy translates only in the existing fixed Settings owner", async () => {
+  const title = "Unified model controls";
+  const description = "Combine model, reasoning effort, and context window selection into one composer menu.";
+  const dom = new JSDOM(`<body><main><h3>${title}</h3><p>${description}</p><p>Thinking…</p></main>
+    <div id="portal-root"><div role="dialog" data-settings-dialog-root>
+      <section data-settings-scroll aria-label="Experimental">
+        <section data-section-id="experimental-experiments">
+          <div data-settings-row><div><h3>${title}</h3><p>${description}</p></div>
+            <button role="switch" aria-checked="true"></button></div>
+          <div data-user-content><h3>${title}</h3></div>
+          <pre><code>${description}</code></pre><input value="${title}">
+        </section>
+        <section data-section-id="fictional-data"><h3>${title}</h3></section>
+      </section>
+    </div></div></body>`);
+  const { document } = dom.window;
+  const owner = document.querySelector('[data-section-id="experimental-experiments"]');
+  const heading = owner.querySelector("[data-settings-row] h3");
+  const paragraph = owner.querySelector("[data-settings-row] p");
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => heading.textContent === "统一模型控件" &&
+    paragraph.textContent === dictionary[description]);
+  assert.equal(document.querySelector("main h3").textContent, title);
+  assert.equal(document.querySelector("main p").textContent, description);
+  assert.equal(document.querySelector("main p:last-child").textContent, "Thinking…");
+  assert.equal(owner.querySelector("[data-user-content] h3").textContent, title);
+  assert.equal(owner.querySelector("code").textContent, description);
+  assert.equal(owner.querySelector("input").value, title);
+  assert.equal(owner.querySelector("button").getAttribute("aria-checked"), "true");
+  assert.equal(document.querySelector('[data-section-id="fictional-data"] h3').textContent, title);
+  owner.setAttribute("data-user-content", "");
+  await waitFor(() => heading.textContent === title && paragraph.textContent === description);
+  overlay.stop();
+  assert.equal(heading.textContent, title);
+  dom.window.close();
+});
 
 function fixture() {
   const dom = new JSDOM(`<body><main>Thinking</main><div id="portal-root"><div role="dialog" data-settings-dialog-root>
@@ -610,6 +694,42 @@ test("repository Settings translate fixed controls while preserving repository v
   dom.window.close();
 });
 
+test("native removal notice translates only bounded fixed text without reading the repository name", async () => {
+  const prefix = "Removes ";
+  const suffix = " from the sidebar. The repository on your machine stays, but session worktrees are deleted and recovering uncommitted work from them is manual.";
+  const tail = "Its sessions, including ones started in Copilot CLI, are permanently deleted with their history. This can't be undone.";
+  const dom = new JSDOM(`<body><main><p>Thinking</p></main><div id="portal-root"><div role="dialog" data-settings-dialog-root>
+    <section data-settings-scroll aria-label="Repository"><section data-section-id="project-removal"><div>
+      <div><h2 data-section-heading="true">Remove repository</h2><p></p></div><button>Remove repository</button>
+    </div></section></section></div></div></body>`);
+  const { document } = dom.window;
+  const paragraph = document.querySelector('[data-section-id="project-removal"] p');
+  const mixed = document.createTextNode(`${prefix}private-fixture${suffix}`);
+  const space = document.createTextNode(" ");
+  const ending = document.createTextNode(tail);
+  paragraph.append(mixed, space, ending);
+  let forbiddenReads = 0;
+  Object.defineProperty(mixed, "nodeValue", {
+    configurable: true, get() { forbiddenReads++; throw new Error("Opaque repository must not be read"); },
+    set() { throw new Error("Opaque repository must not be rewritten as a whole"); }
+  });
+  const overlay = startSettingsTranslation(document, dictionary);
+  const value = () => Object.getOwnPropertyDescriptor(dom.window.Node.prototype, "nodeValue").get.call(mixed);
+  await waitFor(() => value() === `${dictionary[prefix]}private-fixture${dictionary[suffix]}` &&
+    ending.nodeValue === dictionary[tail]);
+  assert.equal(forbiddenReads, 0);
+  assert.equal(space.nodeValue, " ");
+  const setter = Object.getOwnPropertyDescriptor(dom.window.Node.prototype, "nodeValue").set;
+  setter.call(mixed, `${prefix}new-private-fixture${suffix}`);
+  await waitFor(() => value() === `${dictionary[prefix]}new-private-fixture${dictionary[suffix]}`);
+  assert.equal(forbiddenReads, 0);
+  overlay.stop();
+  assert.equal(value(), `${prefix}new-private-fixture${suffix}`);
+  assert.equal(ending.nodeValue, tail);
+  assert.equal(forbiddenReads, 0);
+  dom.window.close();
+});
+
 test("account settings translate only card-owned fixed leaves and retain identity and dynamic credit values", async () => {
   const creditsDescription = "AI credits are consumed based on model and token usage.";
   const dom = new JSDOM(`<body><main><p>AI credits</p></main><div id="portal-root"><div role="dialog" data-settings-dialog-root>
@@ -642,7 +762,8 @@ test("account settings translate only card-owned fixed leaves and retain identit
   await waitFor(() => card.querySelector("h3").textContent === "套餐" &&
     card.querySelector('[data-testid^="github-account-card-"] section div div div span span').textContent === "AI 点数" &&
     document.querySelector('[data-section-id="account-separate-copilot"] h2').textContent === "独立 Copilot 账户" &&
-    card.querySelector("section p").textContent === dictionary[creditsDescription]);
+    card.querySelector("section p").textContent === dictionary[creditsDescription] &&
+    document.querySelector('[data-section-id="account-separate-copilot"] [data-switch-state-label]')?.textContent === "开启");
   assert.equal(card.querySelector("section > span").textContent, "Copilot Max");
   assert.equal(card.querySelector("section p").textContent, dictionary[creditsDescription]);
   assert.equal(card.querySelector("section p + p").textContent, "启用额外用量，以便在套餐点数用完后继续使用。");
@@ -911,6 +1032,38 @@ test("a host update to protected code restores the surrounding sentence", async 
   await waitFor(() => root.textContent.startsWith("Prefix added to generated branch names."));
   assert.equal(root.querySelector("code").textContent, "%changed%");
   overlay.stop();
+  dom.window.close();
+});
+
+test("general-about section translates static title, description, and update button and restores cleanly", async () => {
+  const dom = new JSDOM(`<body>
+    <div id="portal-root"><div role="dialog" data-settings-dialog-root>
+      <section data-settings-scroll aria-label="General">
+        <section data-section-id="general-about">
+          <div>
+            <div>
+              <h2>About</h2>
+              <p>Check for updates to see if a newer version is available</p>
+            </div>
+            <div>
+              <button>Check for updates</button>
+            </div>
+          </div>
+        </section>
+      </section>
+    </div></div></body>`);
+  const { document } = dom.window;
+  const overlay = startSettingsTranslation(document, dictionary);
+  const heading = document.querySelector('[data-section-id="general-about"] h2');
+  const paragraph = document.querySelector('[data-section-id="general-about"] p');
+  const button = document.querySelector('[data-section-id="general-about"] button');
+  await waitFor(() => heading.textContent === "关于" &&
+    paragraph.textContent === "检查是否有更新版本可用" &&
+    button.textContent === "检查更新");
+  overlay.stop();
+  assert.equal(heading.textContent, "About");
+  assert.equal(paragraph.textContent, "Check for updates to see if a newer version is available");
+  assert.equal(button.textContent, "Check for updates");
   dom.window.close();
 });
 

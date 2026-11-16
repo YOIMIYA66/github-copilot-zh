@@ -15,13 +15,12 @@ test("mock CDP installs and removes the overlay in a controlled page", async () 
     commands.push(method);
     if (method === "Page.addScriptToEvaluateOnNewDocument") return { identifier: "mock-id" };
     if (method === "Runtime.evaluate") {
-      dom.window.eval(params.expression);
-      return { result: {} };
+      return { result: { value: dom.window.eval(params.expression) } };
     }
     return {};
   } };
   const id = await registerInjection(cdp);
-  await evaluateInjection(cdp);
+  assert.equal(await evaluateInjection(cdp), true);
   const deadline = Date.now() + 2000;
   while (dom.window.document.querySelector("nav span").textContent === "General" && Date.now() < deadline) {
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -43,7 +42,7 @@ test("injection refuses a non-Copilot origin", async () => {
     if (method === "Runtime.evaluate") dom.window.eval(params.expression);
     return { result: {} };
   } };
-  await evaluateInjection(cdp);
+  assert.equal(await evaluateInjection(cdp), false);
   await removeInjection(cdp, "mock-id");
   assert.equal(called, false);
   dom.window.close();

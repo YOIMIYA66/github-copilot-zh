@@ -40,3 +40,62 @@ test("double-click launcher reports missing PowerShell and preserves startup fai
     rmSync(temp, { recursive: true, force: true });
   }
 });
+
+test("start-silent.vbs reports missing PowerShell when pwsh is not on PATH", { skip: process.platform !== "win32" }, () => {
+  const cscript = join(process.env.SystemRoot, "System32", "cscript.exe");
+  const vbsPath = fileURLToPath(new URL("../start-silent.vbs", import.meta.url));
+  const temp = mkdtempSync(join(tmpdir(), "copilot zh vbs "));
+  try {
+    const res = spawnSync(cscript, ["//nologo", vbsPath], {
+      env: { ...process.env, PATH: temp, COPILOT_ZH_TEST_POPUP: "1" },
+      encoding: "utf8", timeout: 10000
+    });
+    assert.equal(res.status, 1);
+    assert.match(res.stdout + res.stderr, /VBS_POPUP: PowerShell 7 or later/);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test("start-silent.vbs forwards to start.ps1 with -Silent and -NoPauseOnError", { skip: process.platform !== "win32" }, () => {
+  const temp = mkdtempSync(join(tmpdir(), "copilot zh vbs fwd "));
+  try {
+    copyFileSync(fileURLToPath(new URL("../start-silent.vbs", import.meta.url)), join(temp, "start-silent.vbs"));
+    writeFileSync(join(temp, "start.ps1"), `param([switch]$Silent, [switch]$NoPauseOnError)
+if ($Silent -and $NoPauseOnError) {
+    exit 0
+}
+exit 42
+`);
+    const res = spawnSync("cscript.exe", ["//nologo", join(temp, "start-silent.vbs")], {
+      cwd: temp,
+      env: { ...process.env, COPILOT_ZH_VBS_WAIT: "1" },
+      encoding: "utf8", timeout: 10000
+    });
+    assert.equal(res.status, 0, res.stderr);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+});
+
+test("start.ps1 -Silent displays native popup on error and does not pause", { skip: process.platform !== "win32" }, () => {
+  const where = join(process.env.SystemRoot, "System32", "where.exe");
+  const found = spawnSync(where, ["pwsh.exe"], { encoding: "utf8" });
+  assert.equal(found.status, 0);
+  const pwshDir = dirname(found.stdout.trim().split(/\r?\n/)[0]);
+  const temp = mkdtempSync(join(tmpdir(), "copilot zh silent "));
+  try {
+    const direct = spawnSync(join(pwshDir, "pwsh.exe"), [
+      "-NoLogo", "-NoProfile", "-File", fileURLToPath(new URL("../start.ps1", import.meta.url)),
+      "-AppPath", join(temp, "missing-github.exe"), "-Silent"
+    ], {
+      env: { ...process.env, COPILOT_ZH_TEST_POPUP: "1" },
+      encoding: "utf8", timeout: 10000
+    });
+    assert.equal(direct.status, 1, direct.stderr);
+    assert.match(direct.stdout + direct.stderr, /POPUP: Launcher failed:/);
+    assert.doesNotMatch(direct.stdout + direct.stderr, /Press Enter to close/);
+  } finally {
+    rmSync(temp, { recursive: true, force: true });
+  }
+});

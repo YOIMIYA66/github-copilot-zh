@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0
+
+### Added & Updated
+
+- Add windowless silent launcher (`start-silent.vbs` and `start.ps1 -Silent`) with native error dialogs on Windows.
+- Localize additional GitHub Copilot Desktop 1.4.2 surfaces: floating text-selection popup (`Add to Side chat`, `Quote`, `Copy`), Composer mode trigger (`协作` while keeping `Interactive` / `Plan` / `Autopilot` English inside the mode menu), Model & reasoning Effort submenu and inline retry banner, `Usage` single-text-node details / heading / ASCII ellipsis variants, project/coding/quick-chat context menus (`Detach session`, `Open in…`, `Customize…`, `New section`, `Project name`, `Project ID`), dynamic `composer-pills` (`Scheduled`, `Changes`, `Artifacts`, `Background`), sidebar `Repository` trigger and `Environment: Cloud` ownership, and expanded topbar/composer/message hover tooltips.
+
+### Performance & Startup
+
+- Replace `setTimeout(drain, 0)` with `MessageChannel` scheduling (`12 ms` / `1,200`-node cold initial pass; `5 ms` / `400`-node steady-state batches) and `O(1)` queue head pointer.
+- Add auto-disconnecting non-subtree deferred shell discovery (`bootstrapObserver`) for delayed `<main>` / sidebar / composer footer mounts, container-gated `refreshPageControls()` with cached Customize headers, single-selector `ownedPopup()` pre-filtering, `drainEpoch` task verification caching, and hover-attribute isolation without `"class"` observation on `#portal-root`.
+- Speed up launch verification and CDP attachment by eliminating the second `pwsh.exe` cold boot via single-session `-Interactive` two-stage checking in `verify-listener.ps1` / `connect.js`, replacing slow `NetTCPIP`/`Get-CimInstance` startup calls with `.NET` listener enumeration (`GetActiveTcpListeners`), `netstat.exe`, and `Process.GetProcessById`, caching the default `injectionSource()` payload, and returning instant active readiness from `evaluateInjection()`.
+
+### Verification & Distribution
+
+- `npm test`: 95/95 unit tests passing on Windows / JSDOM; `npm run benchmark`: 0 scan/callback leaks across protected chat/sidebar/external regions.
+- `github-copilot-zh-0.2.0-source.zip` contains runnable source, launchers (`start.cmd`, `start-silent.vbs`, `start.ps1`), documentation, license and regression tests without `node_modules`.
+
 ## 0.1.1
 
 First tagged release of this independently implemented project.

@@ -6,7 +6,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "computer-use", "model-providers", "experimental", "environments", "repositories"
   ]);
   const fixedSections = new Set([
-    "general-auto-update", "general-launch-at-login", "general-tray-menu",
+    "general-about", "general-auto-update", "general-launch-at-login", "general-tray-menu",
     "general-delete-chat-confirmation", "general-delete-view-confirmation",
     "general-find-in-workspace-position", "general-notification-sound", "general-theme",
     "sessions-manage-sessions", "sessions-verbosity", "sessions-image-generation-watermark",
@@ -26,7 +26,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "general-find-in-workspace-position": ["Top right", "Top left", "Bottom right", "Bottom left", "Center"],
     "sessions-default-model": ["Latest used", "Preferred model"],
     "sessions-worktree-location": ["Global storage", "Inside repository", "Next to repository", "Custom"],
-    "sessions-verbosity": ["Minimal", "Balanced", "Detailed", "Collapse completed turn details behind a summary panel",
+    "sessions-verbosity": ["Minimal", "Balanced", "Detailed", "Concise", "Verbose", "Collapse completed turn details behind a summary panel",
       "Group consecutive tool calls into a single panel", "Show every tool call and intermediate message"],
     "sessions-remote-default": ["Disabled", "View only", "Remote control",
       "Sessions are only available on this device", "View session activity from another device",
@@ -65,16 +65,43 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     composerPermissions: ["Approve all", "Always ask", "Ask every time", "Assisted",
       "Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."],
     composerEffort: ["Low", "Medium", "High", "Extra High", "Max"],
-    composerModel: ["Model", "Effort", "Context window", "Content window", "Effort level", "Learn more", "On", "Off",
+    composerModel: ["Model", "Effort", "Context window", "Content window", "Effort level", "Learn more", "On", "Off", "Retry",
+      "Models will be available when the local session is running.",
       "Prioritizes capable models for challenging tasks and deeper reasoning.",
       "Prioritizes the most capable models for the most demanding tasks and complex reasoning.",
       "Prioritizes versatile models for efficient everyday coding."],
-    composerContext: ["Repository file or folder…", "Session…", "Files…", "Folder…"],
-    customizeAdd: ["MCP Server…", "Plugin…", "Skill", "Canvas from URL…", "Manage marketplaces…"]
+    composerContext: ["Repository file or folder…", "Repository file or folder...", "Project file or folder...", "Session…", "Session...", "Files…", "Files...", "Folder…", "Folder..."],
+    customizeAdd: ["MCP Server…", "Plugin…", "Skill", "Canvas from URL…", "Manage marketplaces…"],
+    sidebarSessionConfig: [
+      "Grouping", "Ordering", "Show", "Status", "PR", "Environment", "Source",
+      "Reset filters", "Collapse all", "Expand all", "Mark all as read",
+      "Repository", "Updated"
+    ],
+    sidebarSessionConfigGrouping: ["Repository", "Last updated", "Status", "Environment"],
+    sidebarSessionConfigOrdering: ["Updated", "Created", "Status", "Name (A-Z)", "Name (Z-A)"],
+    sidebarSessionConfigShow: ["Repository", "Branch"],
+    sidebarSessionConfigStatus: ["Needs attention", "Unread", "Working", "Done"],
+    sidebarSessionConfigPR: ["Draft", "Open", "Merged", "Closed", "No PR"],
+    sidebarSessionConfigEnvironment: ["Cloud", "Codespaces", "WSL", "SSH", "Other remote", "Local"],
+    sidebarSessionConfigSource: ["Desktop", "CLI", "Automations"],
+    composerEnvironment: ["This computer", "Cloud", "Environments", "Codespaces", "Local"],
+    commandPalette: ["Switch model", "Set thinking effort", "Check for updates", "Resume remote session", "Resume session by ID", "New session", "New project", "New issue", "Undo"],
+    workspacePanel: [
+      "Session", "Library", "Terminal", "Browser", "Files", "Side chat", "My work",
+      "Insights", "Canvas", "Add tab", "Overview", "Pick & Polish",
+      "Use Pick & Polish to refine your frontend",
+      "Enter a local dev URL, then press",
+      "to pick elements and polish them live.",
+      "Enter a URL", "URL",
+      "Share browser tab with agent",
+      "Light preview theme", "Dark preview theme", "Preview color scheme"
+    ],
+    msgMore: ["Share as secret gist", "Fork chat from response", "Fork session from response"]
   };
   const accountActionWords = ["Update authorization", "Manage plan", "Remove account", "Set as default"];
   const permissionTitles = { Assisted: "辅助模式", "Approve all": "全部允许" };
-  const modeTriggerLabel = /^(?:Mode: (?:Interactive|Plan|Autopilot)(?:, Ctrl \+ Shift \+ M)?|模式：交互, Ctrl \+ Shift \+ M)$/;
+  const modeTitles = { Interactive: "协作", Plan: "规划", Autopilot: "自动执行" };
+  const modeTriggerLabel = /^(?:Mode: (?:Interactive|Plan|Autopilot)|模式：(?:协作|规划|自动执行))(?:[，,]\s*Ctrl \+ Shift \+ M)?$/;
   const activityLabels = {
     reasoning: "Reasoning", "tool-calls": "Tool calls", "code-search": "Code search",
     "reading-files": "Reading files", "creating-files": "Creating files", "editing-files": "Editing files",
@@ -82,6 +109,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "model-change": "Changing models and agents", compaction: "Compacting the conversation"
   };
   const shortcutLabels = ["Go back", "Go forward", "Previous session", "Next session",
+    "Open review changes", "Run current session", "Stop running", "Submit pull request review",
     "Previous region", "Next region", "Toggle sidebar", "Go to selection actions",
     "Collapse or expand thinking", "Expand tables", "Previous artifact", "Next artifact",
     "Command palette", "Find in file", "Find next match", "Find previous match", "Open settings",
@@ -116,7 +144,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     `${projectsSection} > ul[role="tree"] > li[role="treeitem"]:only-child`,
     '[data-sidebar-live-width] [data-sidebar-session-list="true"] > div > h3#sidebar-sessions-heading',
     `${sessionsSection} > div[data-sidebar-section-header] > h4[id] > button > span`,
-    `${sessionsSection} > ul[role="tree"][aria-labelledby][data-sidebar-session-summary-hint-group] > li[role="treeitem"] > div[data-testid="repository-group-row"] > div#sidebar-group-quick-chats > span:last-child`
+    `${sessionsSection} > ul[role="tree"][aria-labelledby][data-sidebar-session-summary-hint-group] > li[role="treeitem"] > div[data-testid="repository-group-row"] > div#sidebar-group-quick-chats > span:last-child`,
+    '#sidebar-heading',
+    '#quick-links-heading'
   ];
   const sidebarStaticRoots = new WeakSet();
   const sidebarStaticBoundaries = new Map();
@@ -139,8 +169,28 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const chromeRootSelectors = [
     'nav[aria-labelledby="quick-links-heading"]', "[data-sidebar-footer]",
     '[data-testid="composer-pills"]', "[data-rich-composer-footer]", sidebarNavigationSelector, annotationToolbar,
-    ...sidebarStaticSelectors, sidebarNewSessionTrigger
+    ...sidebarStaticSelectors, sidebarNewSessionTrigger,
+    'button[data-testid="sidebar-session-configuration"]',
+    'button[data-testid="sidebar-feedback-button"]',
+    'button[data-testid="navigation-back-button"]',
+    'button[data-testid="navigation-forward-button"]',
+    'button[aria-label^="Toggle sidebar"]',
+    'button[aria-label^="切换侧栏"]',
+    'button[aria-label="Search"]',
+    'button[aria-label^="Search,"]',
+    'button[aria-label="搜索"]',
+    'button[aria-label^="搜索，"]',
+    'button[aria-label^="New session"]',
+    'button[aria-label="New chat"]',
+    'button[aria-label^="新建会话"]',
+    'button[aria-label="新建聊天"]',
+    '[data-sidebar-live-width] div[role="separator"]',
+    '[data-sidebar-resize-handle]',
+    'main button[aria-label^="Environment:"], main button[aria-label^="环境："]',
+    'main button[aria-label^="Repository:"], main button[aria-label^="仓库："]',
+    'aside[data-testid="chat-canvas-panel"]'
   ];
+  const chromeRootSelector = chromeRootSelectors.join(",");
   const sidebarBoundaryObservers = new Map();
   const sidebarNavigationRoots = new WeakSet();
   const themeSectionIds = new Set(["general-theme", "themes-mode", "themes-terminal"]);
@@ -152,15 +202,34 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const projectNavSections = new Set([...projectSections, "project"]);
   const chromeRoots = new Set();
   const chromeRootObservers = new Map();
-  const mainRoot = document.querySelector("main[data-app-shell-main]");
+  let mainRoot = document.querySelector("main[data-app-shell-main]");
+  const observedMainRoots = new WeakSet();
   const factory = '[data-factory-proposal-host="true"]';
   const factoryHeader = `${factory} header [data-customize-category-header-row]`;
   const setup = `${factory} [role="tabpanel"] main > div > div > div[data-size="medium"]`;
   const customizeHeader = 'header[data-content-leading-inset][data-f6-nav] [data-customize-category-header-row]';
+  const customizeCategories = [
+    "All", "Plan", "Build", "Review", "Test", "Ship", "Monitor", "Design", "Knowledge", "Data", "Communication",
+    "Development", "Infrastructure", "Databases", "Intelligence", "Web", "Productivity", "Observability", "Commerce"
+  ];
+  const composerPlaceholders = [
+    "Ask anything. Use / for commands or & for sessions…",
+    "Ask anything. Use / for commands or & for sessions...",
+    "Ask anything. Use / for commands, & sessions, # issues…",
+    "Ask anything. Use / for commands, & sessions, # issues...",
+    "Ask anything. Use / for commands, & sessions, @ files…",
+    "Ask anything. Use / for commands, & sessions, @ files...",
+    "Ask anything or paste a URL. Use / for commands, & sessions, # issues…",
+    "Ask anything or paste a URL. Use / for commands, & sessions, # issues...",
+    "Steer this session…",
+    "Steer this session..."
+  ];
   const pageRules = [
     { selector: '[data-testid="my-work-inbox-view"] > [data-testid="my-work-list-pane"] > header[data-content-leading-inset][data-tauri-drag-region][data-f6-nav] > div > div > h1',
       words: ["Pull requests", "Issues"], workHeading: true },
     { selector: 'button[data-command="issue.create"] > div > span',
+      words: ["New issue"], issueButton: true },
+    { selector: 'button[data-command="issue.create"] > span[data-component="content"] > span[data-component="label"]',
       words: ["New issue"], issueButton: true },
     { selector: '[data-testid="my-work-inbox-view"] > [data-testid="my-work-list-pane"] > [data-testid="my-work-filter-bar"] > div > [data-tab-row-scroller] > [role="tablist"]',
       words: ["Authored by me", "Assigned to me", "Involves me", "Review requests", "Done", "Created by me", "Mentioning me"],
@@ -173,29 +242,77 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     { selector: `${factoryHeader} button[data-new-automation-action][data-size="small"]`,
       words: ["New automation"] },
     { selector: `${factoryHeader} [role="search"] input[data-size="small"]`,
-      attribute: "placeholder", words: ["Search personal automations…"] },
+      attribute: "placeholder", words: ["Search personal automations…", "Search personal automations..."] },
     { selector: `${setup} > div > div:nth-child(2)`,
       words: ["Set up automations",
         "Use agents to handle recurring work on a cadence you choose or triggered by events. You can start from scratch or turn an existing agent skill into an automation."],
       setup: true },
     { selector: `${setup} [data-prompt-composer-v2][data-command-context="prompt-composer"] [data-rc-consumer="prompt-composer"] [role="textbox"][contenteditable="true"][data-lexical-editor="true"]`,
-      attribute: "data-placeholder", words: ["Describe what this automation should do. Type / for skills…"], setup: true },
+      attribute: "data-placeholder",
+      words: ["Describe what this automation should do. Type / for skills…",
+        "Describe what this automation should do. Type / for skills..."],
+      setup: true },
     { selector: `${setup} button[data-base-ui-tooltip-trigger][aria-describedby]`,
       words: ["Chat"], setup: true },
     { selector: `${customizeHeader} [data-customize-category-drag-region] [data-customize-category-tabs-root="true"]`,
       words: ["Browse", "Installed"] },
+    { selector: 'header[data-content-leading-inset="true"][data-f6-nav] > h1',
+      words: ["Customize"], customizeHeading: true },
+    { selector: '[role="tabpanel"] [data-testid="customize-category-filter"] button[role="tab"] span, [role="tabpanel"] h2#browse-integrations-heading',
+      words: customizeCategories, customizeCategory: true },
     { selector: `${customizeHeader} button[data-testid="extensions-add-menu-trigger"][aria-haspopup="menu"]`,
       words: ["Add"], kind: "customizeAdd" },
     { selector: '[role="tabpanel"] [role="search"] button[data-testid="customize-type-filter-trigger"][aria-haspopup="menu"]',
       words: ["All types"], customize: true },
     { selector: '[role="tabpanel"] [role="search"]:has(button[data-testid="customize-type-filter-trigger"]) input[data-size="large"]',
-      attribute: "placeholder", words: ["Search MCP servers, plugins, skills and more…"], customize: true },
+      attribute: "placeholder",
+      words: ["Search MCP servers, plugins, skills and more…", "Search MCP servers, plugins, skills and more..."],
+      customize: true },
     { selector: 'section[aria-labelledby="featured-editors-picks-heading"] h2[id="featured-editors-picks-heading"]',
-      words: ["Editor’s picks"], customize: true },
+      words: ["Editor’s picks", "Editor's picks"], customize: true },
     { selector: 'section[aria-labelledby="featured-editors-picks-heading"] div:has(> h2[id="featured-editors-picks-heading"]) > p',
       words: ["Standout ways to customize Copilot."], customize: true },
+    { selector: '[role="tabpanel"] section:not([aria-labelledby="featured-editors-picks-heading"]) h2',
+      words: ["Featured", "Plan, build, and ship", "Connect your work", "Extensions", "Canvas", "Skills", "Agents", "Library", "Tools"],
+      customizeSectionTitle: true },
+    { selector: '[role="tabpanel"] section:not([aria-labelledby="featured-editors-picks-heading"]) p',
+      words: ["Tools for planning work, testing experiences, and shipping with confidence.", "Bring the tools and context you use every day into Copilot."],
+      customizeSectionDesc: true },
     { selector: 'section[aria-labelledby="featured-editors-picks-heading"] ul[role="list"][aria-labelledby="featured-editors-picks-heading"] > li[data-carousel-card] button[data-variant="invisible"][data-size="small"]',
-      words: ["Add canvas"], customize: true, cardAction: true }
+      words: ["Add canvas"], customize: true, cardAction: true },
+    { selector: '[data-testid="conversation-composer-area"] div[data-rich-composer-placeholder="true"], main[data-app-shell-main] div[data-rich-composer-placeholder="true"]',
+      words: composerPlaceholders, composerPlaceholderText: true },
+    { selector: '[data-testid="conversation-composer-area"] div[role="textbox"][data-placeholder], main[data-app-shell-main] div[role="textbox"][data-placeholder]',
+      attribute: "data-placeholder", words: composerPlaceholders, composerPlaceholderAttr: true },
+    { selector: 'main[data-app-shell-main] h1', words: ["New"], homeHeading: true },
+    { selector: 'main[data-app-shell-main] p',
+      words: ["GitHub Copilot uses AI. Check for mistakes."], homeDisclaimer: true },
+    { selector: '[data-testid="conversation-composer-area"] div[role="status"], main[data-app-shell-main] div[role="status"]',
+      words: [
+        "You've used all of your AI credits.",
+        "Manage your budget to keep building.",
+        "Manage budget"
+      ],
+      composerStatus: true },
+    { selector: '[data-testid="conversation-composer-area"] button, [data-testid="prompt-suggestions"] button, [data-testid="home-actions"] button',
+      words: [
+        "Compare SQL and NoSQL database tradeoffs",
+        "Compare SQL and NoSQL databases for real-time analytics.",
+        "Design a REST API for a task management service",
+        "Design a REST API for a task management application.",
+        "Draft a product requirements doc for a mobile app",
+        "Draft a product requirements doc for user authentication.",
+        "Add a README explaining how the project works",
+        "Add a README with setup instructions and usage guide.",
+        "Scaffold a project with Vite, React, and TypeScript",
+        "Scaffold a project structure with best practices.",
+        "Find performance bottlenecks and optimization opportunities",
+        "Find performance bottlenecks and optimize them.",
+        "Manage budget",
+        "Try now", "Dismiss", "This computer", "Cloud",
+        "New session, Ctrl + N. New chat, Ctrl + Shift + N."
+      ],
+      homeButton: true }
   ];
   const pageControls = new Map();
   const pageBoundaryObservers = new Map();
@@ -205,17 +322,20 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     "data-size", "data-variant", "data-testid", "contenteditable", "data-user-content",
     "data-factory-proposal-host", "data-customize-category-tabs-root", "data-customize-category-header-row",
     "data-customize-category-drag-region", "data-tab-row-scroller", "data-new-automation-action",
-    "data-content-leading-inset", "data-f6-nav", "data-tauri-drag-region",
-    "data-command-context", "data-rc-consumer", "data-lexical-editor", "data-prompt-composer-v2",
+    "data-content-leading-inset", "data-f6-nav", "data-tauri-drag-region", "data-window-caption-spacer",
+    "data-command", "data-command-context", "data-rc-consumer", "data-lexical-editor", "data-prompt-composer-v2",
     "data-rich-composer-footer", "data-value", "data-open", "data-image-preview-dialog",
     "data-window-dialog-position"];
+  const pageOwnerAttrSet = new Set(pageOwnerAttributes);
+  const attrTargetSelector = 'input[role="searchbox"],input[role="combobox"],button[aria-label],textarea,[data-placeholder],[role="separator"],[data-sidebar-resize-handle]';
   const chromeObserverOptions = {
     subtree: true, childList: true, characterData: true, attributes: true,
     attributeFilter: ["aria-expanded", "aria-controls", "aria-haspopup", "aria-labelledby", "aria-label",
       "id", "role", "data-testid", "data-open", "data-popup-open", "data-side", "data-align", "tabindex",
       "data-base-ui-focusable", "data-kbd-chord", "data-rootownerid", "aria-describedby",
       "data-sidebar-nav-item", "data-command", "data-sidebar-file-drop-kind", "data-selected",
-      "data-user-content", "contenteditable", "data-menu-has-radio-item", "data-nested", "hidden", "aria-hidden", ...pageOwnerAttributes]
+      "data-user-content", "contenteditable", "data-menu-has-radio-item", "data-nested", "data-auto-tier-id",
+      "aria-setsize", "aria-posinset", "hidden", "aria-hidden", ...pageOwnerAttributes]
   };
   const splitPatterns = [
     { section: "project-repository-configuration", tag: "P", parents: ["P", "P", "CODE", "P", "P"],
@@ -264,6 +384,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const tracked = new Map();
   const attributes = new Map();
   const chromePopupObservers = new Map();
+  const feedbackPopups = new Set();
+  const sessionContextPopups = new Set();
+  const sessionContextBoundaryObservers = new Map();
   const usagePopupEntries = new Map();
   const usagePopupObserverStates = new Map();
   const usageTriggers = new WeakSet();
@@ -271,8 +394,30 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   const stats = { settingsScans: 0, portalScans: 0, chromeScans: 0, callbacks: 0, unmatchedFixedNodes: 0, batchMs: [], callbackMs: [] };
   const unmatched = new WeakSet();
   const queue = [];
+  let queueHead = 0;
   const queued = new Set();
   let timer = null;
+  const ChannelCtor = document.defaultView.MessageChannel || globalThis.MessageChannel;
+  const drainChannel = ChannelCtor ? new ChannelCtor() : null;
+  let drainInFlight = false;
+  let initialDrainDone = false;
+  if (drainChannel) {
+    drainChannel.port1.unref?.();
+    drainChannel.port2.unref?.();
+    drainChannel.port1.onmessage = () => {
+      drainInFlight = false;
+      if (!stopped && queueHead < queue.length) drain();
+    };
+  }
+  function scheduleDrain() {
+    if (stopped || drainInFlight || timer !== null) return;
+    if (drainChannel) {
+      drainInFlight = true;
+      drainChannel.port2.postMessage(null);
+    } else {
+      timer = document.defaultView.setTimeout(drain, 0);
+    }
+  }
   let dialog = null;
   let colorFilterCache = null;
   let colorFilterCacheDirty = true;
@@ -282,9 +427,11 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   let colorPreviewLabels = new Map();
   let colorPreviewObserver = null;
   let stopped = false;
+  let initialized = false;
 
   function chromeRootFor(element) {
-    if (!element) return null;
+    if (!element || !chromeRoots.size) return null;
+    if (chromeRoots.has(element) && element.isConnected) return element;
     let nearest = null;
     for (const root of chromeRoots) {
       if (root.isConnected && root.contains(element) && (!nearest || nearest.contains(root))) nearest = root;
@@ -312,13 +459,23 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         observeAnnotationTooltips(button);
       }
     }
+    if (initialized) {
+      for (const trigger of root.querySelectorAll('button[aria-expanded="true"][aria-haspopup]')) {
+        const popup = ownedPopupForTrigger(trigger);
+        if (popup) {
+          if (chromeMenuKind(trigger)) observeChromePopup(popup);
+          scanOwnedPopup(popup);
+        }
+      }
+      for (const trigger of root.querySelectorAll('button[data-popup-open]')) {
+        scanHoverTooltipForTrigger(trigger);
+      }
+    }
   }
 
   function discoverChromeRoots(scope) {
-    for (const selector of chromeRootSelectors) {
-      if (scope.nodeType === 1 && scope.matches(selector)) addChromeRoot(scope);
-      for (const root of scope.querySelectorAll(selector)) addChromeRoot(root);
-    }
+    if (scope.nodeType === 1 && scope.matches(chromeRootSelector)) addChromeRoot(scope);
+    for (const root of scope.querySelectorAll(chromeRootSelector)) addChromeRoot(root);
     if (scope.nodeType === 1 && scope.matches("[data-sidebar-live-width]")) discoverSidebarNavigation(scope);
     for (const sidebar of scope.querySelectorAll("[data-sidebar-live-width]")) discoverSidebarNavigation(sidebar);
     if (scope === document || mainRoot?.contains(scope)) refreshPageControls();
@@ -338,15 +495,80 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     return found;
   }
 
-  function validPageControl(root, rule) {
+  function validCustomizeHeader(header) {
+    if (!header?.matches('header[data-content-leading-inset="true"][data-f6-nav]') ||
+        header.children.length !== 3) return false;
+    const [heading, middle, spacer] = header.children;
+    const row = middle.firstElementChild;
+    if (!heading.matches("h1") || !usageLeafText(heading) ||
+        !["Customize", dictionary.Customize].includes(heading.firstChild.nodeValue) ||
+        !middle.matches("div") || middle.children.length !== 1 ||
+        !spacer.matches('div[data-window-caption-spacer="true"]') ||
+        !row?.matches("div[data-customize-category-header-row]") || row.children.length !== 3) return false;
+    return row.firstElementChild.matches("div[data-customize-category-drag-region]") &&
+      !!row.firstElementChild.querySelector('[data-customize-category-tabs-root="true"] [role="tablist"]') &&
+      row.children[1].matches("div") && row.children[2].matches("div") &&
+      !!row.children[2].querySelector('button[data-testid="extensions-add-menu-trigger"][aria-haspopup="menu"]');
+  }
+
+  function validPageControl(root, rule, getCustomizeParents) {
     if (!rule || !root.isConnected || !mainRoot?.contains(root) ||
         root.closest("[data-user-content],[data-testid=workflow-gallery-card]")) return false;
-    if (rule.related) return rule.related.isConnected && validPageControl(rule.related, pageControls.get(rule.related)) &&
+    if (rule.related) return rule.related.isConnected && validPageControl(rule.related, pageControls.get(rule.related), getCustomizeParents) &&
       (rule.related.getAttribute("aria-describedby") || "").split(/\s+/).includes(root.id) &&
       !root.closest("[contenteditable]");
     if (rule.emptyCaption) return validWorkPanel(rule.emptyCaption) &&
       workEmptyCaption(rule.emptyCaption) === root;
     if (!root.matches(rule.selector)) return false;
+    if (rule.customizeHeading) return validCustomizeHeader(root.parentElement);
+    const hasCustomizeParent = panel => {
+      if (getCustomizeParents) return getCustomizeParents().has(panel.parentElement);
+      return [...mainRoot.querySelectorAll('header[data-content-leading-inset="true"][data-f6-nav]')]
+        .some(header => validCustomizeHeader(header) && header.parentElement === panel.parentElement);
+    };
+    if (rule.customizeCategory) {
+      if (root.matches("h2#browse-integrations-heading")) {
+        const panel = root.closest('[role="tabpanel"]');
+        return !!usageLeafText(root) && !root.closest("[contenteditable]") && !!panel &&
+          hasCustomizeParent(panel);
+      }
+      const button = root.closest('button[role="tab"]');
+      const panel = root.closest('[role="tabpanel"]');
+      return !!usageLeafText(root) && !!button && button.children.length === 1 &&
+        !root.closest("[contenteditable]") && !!panel &&
+        hasCustomizeParent(panel);
+    }
+    if (rule.customizeSectionTitle || rule.customizeSectionDesc) {
+      const panel = root.closest('[role="tabpanel"]');
+      return !root.closest("[data-user-content],[contenteditable],ul[role=list],li,article") && !!panel &&
+        hasCustomizeParent(panel);
+    }
+    if (rule.composerPlaceholderText) {
+      return root.matches('div[data-rich-composer-placeholder="true"]') &&
+        !root.closest("[data-user-content],[data-testid=conversation-body],[data-factory-proposal-host],[data-testid='my-work-inbox-view'],article,#chat");
+    }
+    if (rule.composerPlaceholderAttr) {
+      return root.matches('div[role="textbox"][data-placeholder]') &&
+        !root.closest("[data-user-content],[data-testid=conversation-body],[data-factory-proposal-host],[data-testid='my-work-inbox-view'],article,#chat");
+    }
+    if (rule.homeHeading) {
+      if (root.closest(".chat,#chat,[data-user-content],[data-testid=conversation-body],[data-factory-proposal-host],[data-testid='my-work-inbox-view'],header,article")) return false;
+      return root.matches("h1") && !!usageLeafText(root) &&
+        ["New", dictionary.New].includes(root.textContent.trim());
+    }
+    if (rule.homeDisclaimer) {
+      if (root.closest(".chat,#chat,[data-user-content],[data-testid=conversation-body],[data-factory-proposal-host],[data-testid='my-work-inbox-view'],header,article")) return false;
+      return root.matches("p") && !!usageLeafText(root) &&
+        ["GitHub Copilot uses AI. Check for mistakes.", dictionary["GitHub Copilot uses AI. Check for mistakes."]].includes(root.textContent.trim());
+    }
+    if (rule.homeButton || rule.promptSuggestion || rule.homeAction) {
+      return root.matches("button") && !root.matches('[data-new-automation-action],button[data-command],button[role="tab"]') &&
+        !root.closest(".chat,#chat,[data-testid='composer-pills'],[data-rich-composer-footer],[data-user-content],[contenteditable],[data-testid=conversation-body],[data-factory-proposal-host],[data-testid='my-work-inbox-view'],header,article");
+    }
+    if (rule.composerStatus) {
+      return root.matches('div[role="status"]') &&
+        !root.closest(".chat,#chat,[data-user-content],[data-testid=conversation-body],[data-factory-proposal-host],[data-testid='my-work-inbox-view'],article");
+    }
     if (rule.workFilters) {
       const title = root.closest('[data-testid="my-work-list-pane"]')?.querySelector(
         'header[data-content-leading-inset][data-tauri-drag-region][data-f6-nav] > div > div > h1');
@@ -359,6 +581,11 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const pane = header?.parentElement;
       const view = pane?.parentElement;
       const heading = header?.querySelector("h1");
+      const labelWrapper = root.parentElement;
+      const nativeLabel = labelWrapper?.matches('span[data-component="content"]') &&
+        root.matches('span[data-component="label"]') && button?.children.length === 1 &&
+        labelWrapper.children.length === 1 && !!usageLeafText(root);
+      const legacyLabel = labelWrapper?.matches("div") && root.matches("span");
       let shell = view;
       for (let depth = 0; depth < 4; depth++) {
         shell = shell?.parentElement;
@@ -366,6 +593,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       }
       if (!button?.matches('button[data-command="issue.create"]') ||
           root.parentElement?.parentElement !== button ||
+          !(nativeLabel || legacyLabel) ||
           !header?.matches('header[data-content-leading-inset="true"][data-tauri-drag-region="true"][data-f6-nav]') ||
           !pane?.matches('[data-testid="my-work-list-pane"]') ||
           !view?.matches('[data-testid="my-work-inbox-view"]') || shell.parentElement !== mainRoot ||
@@ -425,6 +653,21 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function refreshPageControls() {
     if (!mainRoot) return;
+    const hasWorkView = !!mainRoot.querySelector('[data-testid="my-work-inbox-view"]');
+    const hasFactory = !!mainRoot.querySelector(factory);
+    const hasCustomizeCandidate = !!mainRoot.querySelector(
+      'header[data-content-leading-inset="true"][data-f6-nav],[data-customize-category-header-row],[data-testid="customize-type-filter-trigger"],#featured-editors-picks-heading,[data-testid="customize-category-filter"]'
+    );
+    let customizeParentSet = null;
+    function getCustomizeParents() {
+      if (customizeParentSet) return customizeParentSet;
+      customizeParentSet = new Set();
+      if (!hasCustomizeCandidate) return customizeParentSet;
+      for (const header of mainRoot.querySelectorAll('header[data-content-leading-inset="true"][data-f6-nav]')) {
+        if (validCustomizeHeader(header) && header.parentElement) customizeParentSet.add(header.parentElement);
+      }
+      return customizeParentSet;
+    }
     const boundaries = new Set(pageRouteBoundaries);
     const messages = new Set();
     function rememberRoutePrefix(owner) {
@@ -438,12 +681,31 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       }
     }
     for (const composer of mainRoot.querySelectorAll('[data-testid="conversation-composer-area"]')) {
+      if (composer.closest('[data-user-content],[data-testid="conversation-body"],article')) continue;
       rememberRoutePrefix(composer);
+      boundaries.add(composer);
+      for (const child of composer.children) {
+        if (child.tagName === "DIV" && !child.matches("[contenteditable]") && !child.querySelector("[contenteditable]")) {
+          boundaries.add(child);
+        }
+      }
+      for (const root of composer.querySelectorAll('[data-testid="composer-pills"],[data-rich-composer-footer]')) {
+        addChromeRoot(root);
+        for (let parent = root.parentElement; parent && parent !== mainRoot; parent = parent.parentElement) {
+          if (!parent.closest("[contenteditable]")) boundaries.add(parent);
+        }
+      }
+    }
+    for (const root of mainRoot.querySelectorAll('aside[data-testid="chat-canvas-panel"],[data-testid="composer-pills"],[data-rich-composer-footer]')) {
+      if (root.closest('[data-user-content],[data-testid="conversation-body"],article')) continue;
+      if (root.matches('aside[data-testid="chat-canvas-panel"]')) rememberRoutePrefix(root);
+      addChromeRoot(root);
     }
     function register(root, rule) {
-      if (!validPageControl(root, rule)) return;
+      if (!validPageControl(root, rule, getCustomizeParents)) return;
       pageControls.set(root, rule);
       addChromeRoot(root);
+      if (rule.customizeHeading) boundaries.add(root.parentElement.children[2]);
       let parent = root.parentElement;
       if (rule.cardAction) parent = root.closest("ul[role=list]");
       for (; parent && parent !== mainRoot; parent = parent.parentElement) {
@@ -472,23 +734,30 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         }
       }
     }
-    for (const rule of pageRules) for (const root of mainRoot.querySelectorAll(rule.selector)) {
-      if (rule.emptyHost) {
-        if (!validWorkPanel(root)) continue;
-        boundaries.add(root);
-        if (root.children.length === 1 && root.firstElementChild.matches("div") &&
-            !root.firstElementChild.hasAttribute("data-user-content")) boundaries.add(root.firstElementChild);
-        const caption = workEmptyCaption(root);
-        if (caption) {
-          const message = caption.parentElement.nextElementSibling;
-          boundaries.add(message);
-          messages.add(message);
-          register(caption, { words: rule.words, emptyCaption: root });
-        }
-      } else register(root, rule);
+    for (const rule of pageRules) {
+      if (!hasWorkView && (rule.workHeading || rule.workFilters || rule.emptyHost)) continue;
+      if (!hasFactory && (rule.setup || rule.selector.startsWith(factory))) continue;
+      if (!hasCustomizeCandidate && (rule.customizeHeading || rule.customizeCategory ||
+          rule.customizeSectionTitle || rule.customizeSectionDesc || rule.customize ||
+          rule.kind === "customizeAdd" || rule.selector.startsWith(customizeHeader))) continue;
+      for (const root of mainRoot.querySelectorAll(rule.selector)) {
+        if (rule.emptyHost) {
+          if (!validWorkPanel(root)) continue;
+          boundaries.add(root);
+          if (root.children.length === 1 && root.firstElementChild.matches("div") &&
+              !root.firstElementChild.hasAttribute("data-user-content")) boundaries.add(root.firstElementChild);
+          const caption = workEmptyCaption(root);
+          if (caption) {
+            const message = caption.parentElement.nextElementSibling;
+            boundaries.add(message);
+            messages.add(message);
+            register(caption, { words: rule.words, emptyCaption: root });
+          }
+        } else register(root, rule);
+      }
     }
     for (const [root, rule] of pageControls) {
-      if (validPageControl(root, rule)) continue;
+      if (validPageControl(root, rule, getCustomizeParents)) continue;
       pageControls.delete(root);
       chromeRootObservers.get(root)?.disconnect();
       chromeRootObservers.delete(root);
@@ -544,6 +813,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         section.querySelector(":scope > div > h3#sidebar-agents-heading") ? "No projects yet" : null;
     }
     if (kind === 2) return "Sessions";
+    if (kind === 5) return "Sidebar";
+    if (kind === 6) return "Quick links";
     if (kind !== 3 && kind !== 4) return null;
     const section = root.closest("section");
     const heading = section.querySelector(":scope > div[data-sidebar-section-header] > h4[id]");
@@ -588,13 +859,13 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     sidebarStaticBoundaries.set(sidebar, boundaries);
   }
 
-  function removeDisconnectedChromeRoots() {
-    if (pageControls.size || pageBoundaryObservers.size) refreshPageControls();
+  function removeDisconnectedChromeRoots(refreshPages = true) {
+    if (refreshPages && (pageControls.size || pageBoundaryObservers.size)) refreshPageControls();
     for (const root of chromeRoots) {
       const rule = pageControls.get(root);
       if (root.isConnected && (rule ? validPageControl(root, rule) :
           !root.closest("[data-user-content],[contenteditable]") &&
-          chromeRootSelectors.some(selector => root.matches(selector))) &&
+          root.matches(chromeRootSelector)) &&
           (!sidebarNavigationRoots.has(root) || root.matches(sidebarNavigationSelector)) &&
           (!root.matches(sidebarNewSessionTrigger) || isSidebarNewSessionTrigger(root)) &&
           (!sidebarStaticRoots.has(root) || sidebarStaticKind(root))) continue;
@@ -640,11 +911,16 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   }
 
   function composerMenuKind(trigger) {
-    if (!trigger.matches('[data-rich-composer-footer] button[aria-haspopup="menu"][id][data-base-ui-tooltip-trigger]')) return false;
+    const isComposerFooter = trigger.matches('[data-rich-composer-footer] button[aria-haspopup="menu"][id][data-base-ui-tooltip-trigger]');
+    const isHomeEnv = trigger.matches('main[data-app-shell-main] button[aria-haspopup="menu"][id]') &&
+      ((trigger.getAttribute("aria-label") || "").startsWith("Environment:") ||
+        (trigger.getAttribute("aria-label") || "").startsWith("环境："));
+    if (!isComposerFooter && !isHomeEnv) return false;
     const label = trigger.getAttribute("aria-label") || "";
+    if (isHomeEnv) return "composerEnvironment";
     if (modeTriggerLabel.test(label)) return "composerMode";
     if (/^.+, model and reasoning(?:, Ctrl \+ Shift \+ E)?$/.test(label)) return "composerModel";
-    if (label === "Add context & more") return "composerContext";
+    if (label === "Add context & more" || label === dictionary["Add context & more"]) return "composerContext";
     return null;
   }
 
@@ -780,6 +1056,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const boundaries = new Set([
       content, content.children[0], content.children[1], content.children[1].firstElementChild, actions
     ]);
+    const headingNode = usageLeafText(popup.firstElementChild);
+    const hasUsageHeading = !!(headingNode && ["Usage", dictionary.Usage].includes(headingNode.nodeValue));
+    if (hasUsageHeading) {
+      fixed.add(headingNode);
+      boundaries.add(popup.firstElementChild);
+    }
     for (const rows of [summaryRows, detailRows]) {
       for (const { row, labelNode } of rows.values()) {
         fixed.add(labelNode);
@@ -804,28 +1086,49 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const tokenLabels = [...tokenValue.firstElementChild.querySelectorAll("span[data-base-ui-tooltip-trigger]")];
     if (tokenLabels.length !== 2) return null;
     for (const label of tokenLabels) {
-      if (label.childNodes.length !== 3 || [...label.childNodes].some(node => node.nodeType !== 3) ||
-          label.firstChild.nodeValue !== "(") return null;
-      const suffix = label.lastChild.nodeValue;
-      if ([" cached)", ` ${dictionary.cached})`].includes(suffix)) {
-        suffixes.set(label.lastChild, [" cached)", ` ${dictionary.cached})`]);
-      } else if ([" reasoning)", ` ${dictionary.reasoning})`].includes(suffix)) {
-        suffixes.set(label.lastChild, [" reasoning)", ` ${dictionary.reasoning})`]);
+      let detail = label;
+      if (label.children.length === 3 && label.childNodes.length === 3 &&
+          [...label.children].every(child => child.matches("span"))) {
+        const [total, numeric, description] = label.children;
+        if (!label.id || !usageLeafText(total) || numeric.childNodes.length !== 2 ||
+            numeric.firstChild.nodeType !== 1 || numeric.firstChild.tagName.toLowerCase() !== "svg" ||
+            numeric.lastChild.nodeType !== 3) return null;
+        detail = description;
+        boundaries.add(label);
+        boundaries.add(description);
+      }
+      let suffixNode = null;
+      if (detail.childNodes.length === 3 && ![...detail.childNodes].some(node => node.nodeType !== 3) &&
+          detail.firstChild.nodeValue === "(") {
+        suffixNode = detail.lastChild;
+      } else if (detail.childNodes.length === 1 && detail.firstChild.nodeType === 3 &&
+          detail.firstChild.length > 0 && detail.firstChild.substringData(0, 1) === "(") {
+        suffixNode = detail.firstChild;
+      }
+      if (!suffixNode) return null;
+      const endsWith = value => suffixNode.length >= value.length &&
+        suffixNode.substringData(suffixNode.length - value.length, value.length) === value;
+      if (endsWith(" cached)") || endsWith(` ${dictionary.cached})`)) {
+        suffixes.set(suffixNode, [" cached)", ` ${dictionary.cached})`]);
+      } else if (endsWith(" reasoning)") || endsWith(` ${dictionary.reasoning})`)) {
+        suffixes.set(suffixNode, [" reasoning)", ` ${dictionary.reasoning})`]);
       } else return null;
     }
     if (new Set([...suffixes.values()].map(([original]) => original)).size !== 4) return null;
 
-    const actionWords = ["Compact conversation", "View usage and plan…"];
+    const actionWords = [["Compact conversation"], ["View usage and plan…", "View usage and plan..."]];
     const foundActions = new Set();
     for (const button of actions.children) {
       const node = usageLeafText(button);
-      const word = actionWords.find(value => [value, dictionary[value]].includes(node?.nodeValue));
-      if (!node || !word || foundActions.has(word) || fixed.has(node)) return null;
-      foundActions.add(word);
+      const group = actionWords.find(variants =>
+        variants.some(value => [value, dictionary[value]].includes(node?.nodeValue)));
+      const canonical = group?.[0];
+      if (!node || !canonical || foundActions.has(canonical) || fixed.has(node)) return null;
+      foundActions.add(canonical);
       fixed.add(node);
       boundaries.add(button);
     }
-    if (fixed.size !== 6 || foundActions.size !== actionWords.length) return null;
+    if (fixed.size !== (hasUsageHeading ? 7 : 6) || foundActions.size !== actionWords.length) return null;
     return { fixed: [...fixed], suffixes, boundaries };
   }
 
@@ -941,15 +1244,22 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         trigger.closest("[data-user-content],[contenteditable]")) return null;
     if (isSidebarMenuTrigger(trigger)) return "sidebar";
     if (isSidebarNewSessionTrigger(trigger)) return "sidebarNewSession";
+    if (trigger.matches('button[data-testid="sidebar-session-configuration"]')) return "sidebarSessionConfig";
     const pageRule = pageControls.get(trigger);
     if (pageRule?.kind === "customizeAdd" && validPageControl(trigger, pageRule)) return "customizeAdd";
+    if (trigger.matches('[data-testid="conversation-message-row"] button[aria-haspopup="menu"][id]') &&
+        !trigger.closest("[data-user-content],[contenteditable]") &&
+        ["More response actions", dictionary["More response actions"],
+          "More options", dictionary["More options"]].includes(trigger.getAttribute("aria-label") || "")) {
+      return "msgMore";
+    }
     const directKind = composerMenuKind(trigger);
     if (directKind) return directKind;
     const parentMenu = trigger.closest('[role="menu"][id][aria-labelledby]');
     const parentTrigger = parentMenu && document.getElementById(parentMenu.getAttribute("aria-labelledby"));
     const parentKind = parentTrigger && chromeMenuKind(parentTrigger);
     if (!parentMenu || !parentTrigger || !parentKind || !parentMenu.contains(trigger) ||
-        parentTrigger.getAttribute("aria-controls") !== parentMenu.id ||
+        (parentTrigger.getAttribute("aria-controls") && parentTrigger.getAttribute("aria-controls") !== parentMenu.id) ||
         !parentMenu.hasAttribute("data-open") || !parentMenu.hasAttribute("data-rootownerid") ||
         !parentMenu.parentElement?.matches('[role="presentation"][data-open]') ||
         !parentMenu.parentElement.parentElement?.matches("[data-base-ui-portal]")) return null;
@@ -962,6 +1272,16 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         (label === "Tool permissions" || label === dictionary["Tool permissions"])) return "composerPermissions";
     if (parentKind === "composerModel" && labels &&
         (label === "Effort" || label === dictionary.Effort)) return "composerEffort";
+    if (parentKind === "sidebarSessionConfig") {
+      const base = label.split('\n')[0].trim();
+      if (base === "Grouping" || base === dictionary.Grouping) return "sidebarSessionConfigGrouping";
+      if (base === "Ordering" || base === dictionary.Ordering) return "sidebarSessionConfigOrdering";
+      if (base === "Show" || base === dictionary.Show) return "sidebarSessionConfigShow";
+      if (base === "Status" || base === dictionary.Status) return "sidebarSessionConfigStatus";
+      if (base === "PR" || base === dictionary.PR) return "sidebarSessionConfigPR";
+      if (base === "Environment" || base === dictionary.Environment) return "sidebarSessionConfigEnvironment";
+      if (base === "Source" || base === dictionary.Source) return "sidebarSessionConfigSource";
+    }
     return null;
   }
 
@@ -972,8 +1292,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function menuRowLabels(item) {
     if (!item?.matches('[role="menuitem"]') ||
-        !item.parentElement?.matches("[data-menu-has-radio-item]") ||
-        !item.parentElement.parentElement?.parentElement?.matches('[role="menu"]')) return null;
+        !item.parentElement?.matches('div,[data-menu-has-radio-item],[role="group"],[role="none"]') ||
+        !item.closest('[role="menu"]') || item.closest("[data-user-content],[contenteditable]")) return null;
     const labels = [...item.querySelectorAll(":scope > span > span > span")]
       .filter(node => {
         const hidden = node.closest('[aria-hidden="true"],[hidden]');
@@ -1010,6 +1330,18 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     return null;
   }
 
+  const messageTooltipTitles = new Set([
+    "Bookmark to timeline", "Copy response", "Copy assistant message",
+    "Copy user message", "Edit message", "More response actions"
+  ]);
+  const footerTooltipTitles = new Set([
+    "Mode", "Model & reasoning", "Add context & more", "Start voice recording", "AI usage", "Send", "Send message", "Stop"
+  ]);
+
+  const topChromeTooltipTitles = new Set([
+    "Back", "Forward", "Configure sessions", "Toggle sidebar", "Search", "New session", "New chat"
+  ]);
+
   function activeHoverTooltipTrigger(title) {
     let candidates = [];
     if (title === "Share feedback") {
@@ -1024,19 +1356,86 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           candidates.push(...root.querySelectorAll('button[data-command="app.settings.open"][data-popup-open]'));
         }
       }
-    } else {
+    } else if (topChromeTooltipTitles.has(title)) {
+      const selectorMap = {
+        Back: 'button[data-testid="navigation-back-button"][data-popup-open]',
+        Forward: 'button[data-testid="navigation-forward-button"][data-popup-open]',
+        "Configure sessions": 'button[data-testid="sidebar-session-configuration"][data-popup-open]'
+      };
+      if (selectorMap[title]) {
+        for (const root of chromeRoots) {
+          if (root.matches(selectorMap[title])) candidates.push(root);
+        }
+      } else {
+        for (const root of chromeRoots) {
+          if (!root.matches('button[data-popup-open][aria-label]')) continue;
+          const label = root.getAttribute("aria-label") || "";
+          const match = title === "Toggle sidebar"
+            ? /^(?:Toggle sidebar|切换侧栏)(?:[,，]\s*.+)?$/.test(label)
+            : title === "Search"
+              ? /^(?:Search|搜索)(?:[,，]\s*.+)?$/.test(label)
+              : title === "New session"
+                ? /^(?:New session|新建会话)(?:[,，.]\s*.*)?$/.test(label)
+                : /^(?:New chat|新建聊天)(?:[,，]\s*.+)?$/.test(label);
+          if (match) candidates.push(root);
+        }
+      }
+    } else if (title === "Show artifact files") {
+      for (const root of chromeRoots) {
+        if (root.matches('[data-testid="composer-pills"]')) {
+          candidates.push(...root.querySelectorAll('button[data-testid="artifact-files-pill"][data-base-ui-tooltip-trigger][data-popup-open]'));
+        }
+      }
+    } else if (title === "More options") {
+      for (const button of document.querySelectorAll('button[data-popup-open]')) {
+        if (button.closest("[data-user-content],[contenteditable]")) continue;
+        const label = button.getAttribute("aria-label") || "";
+        const inMessageRow = !!button.closest('[data-testid="conversation-message-row"]');
+        const matchesMore = ["More options", dictionary["More options"],
+          "More response actions", dictionary["More response actions"],
+          "More", "More actions", "More session actions"].includes(label) ||
+          /^(?:More options|更多选项|More response actions|更多回答操作)(?:[,，]\s*.+)?$/.test(label) ||
+          (inMessageRow && !label);
+        if (matchesMore && (inMessageRow || button.matches("[data-base-ui-tooltip-trigger]") ||
+            button.closest('[data-sidebar-live-width],header,main,[role="dialog"],[role="menu"]'))) {
+          candidates.push(button);
+        }
+      }
+    } else if (messageTooltipTitles.has(title)) {
+      for (const button of document.querySelectorAll('[data-testid="conversation-message-row"] button[data-popup-open][aria-label]')) {
+        if (button.closest("[data-user-content],[contenteditable]")) continue;
+        const label = button.getAttribute("aria-label") || "";
+        const matchesTitle = label === title || label === dictionary[title] ||
+          (title === "Copy response" && (label === "Copy assistant message" || label === dictionary["Copy assistant message"]));
+        if (matchesTitle) candidates.push(button);
+      }
+    } else if (footerTooltipTitles.has(title)) {
       for (const footer of chromeRoots) {
-        if (!footer.matches('div[data-rich-composer-footer="true"]') ||
-            !footer.closest('div[data-rich-composer-root="true"][data-rc-consumer="prompt-composer"]')) continue;
+        if (!footer.matches("div[data-rich-composer-footer]") ||
+            footer.closest('[data-user-content],[contenteditable],[data-testid="conversation-body"]')) continue;
         for (const button of footer.querySelectorAll(
-          'button[data-base-ui-tooltip-trigger][aria-haspopup="menu"][data-popup-open][aria-label]'
+          'button[data-base-ui-tooltip-trigger][data-popup-open]'
         )) {
           const label = button.getAttribute("aria-label") || "";
-          const kind = modeTriggerLabel.test(label)
-            ? "Mode"
-            : /, model and reasoning(?:, Ctrl \+ Shift \+ E)?$/.test(label)
-              ? "Model & reasoning" : null;
-          if (kind === title) candidates.push(button);
+          const sendMatch = /^(?:Send(?: message| prompt)?|发送(?:消息)?)(?:[,，]\s*.+)?$/i.test(label) ||
+            (button.matches('button[type="submit"]') && !label);
+          const stopMatch = /^(?:Stop|停止)(?:[,，]\s*.+)?$/i.test(label);
+          const matchesKind = title === "Mode"
+            ? modeTriggerLabel.test(label)
+            : title === "Model & reasoning"
+              ? /, model and reasoning(?:, Ctrl \+ Shift \+ E)?$/.test(label)
+              : title === "Add context & more"
+                ? (label === "Add context & more" || label === dictionary["Add context & more"])
+                : title === "Start voice recording"
+                  ? /^(?:Start voice recording|启动语音录音|开始语音输入)(?:[,，]\s*.+)?$/.test(label)
+                  : title === "AI usage"
+                    ? (usageTriggerOwner(button) || label.startsWith("AI credits quota:"))
+                    : (title === "Send" || title === "Send message")
+                      ? sendMatch
+                      : title === "Stop"
+                        ? stopMatch
+                        : false;
+          if (matchesKind) candidates.push(button);
         }
       }
     }
@@ -1048,26 +1447,24 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function hoverTooltipOwner(element) {
     const presentation = element.closest(
-      'div[role="presentation"][data-open][data-side="top"][data-align="center"]'
+      'div[role="presentation"][data-open][data-side][data-align]'
     );
     const portalWrapper = presentation?.parentElement;
     const focusable = presentation?.firstElementChild;
     if (!presentation || presentation.children.length !== 1 ||
         !portalWrapper?.matches("[data-base-ui-portal]") || portalWrapper.parentElement !== document.body ||
-        !focusable?.matches('div[data-open][data-side="top"][data-align="center"][tabindex="-1"][data-base-ui-focusable]') ||
+        !focusable?.matches('div[data-open][data-side][data-align][tabindex="-1"][data-base-ui-focusable]') ||
         focusable.children.length < 1 || focusable.children.length > 2) return null;
     const label = focusable.firstElementChild;
     if (!label?.matches("span") || label.childElementCount || label.childNodes.length !== 1 ||
         label.firstChild.nodeType !== 3) return null;
     const title = label.firstChild.nodeValue.trim();
-    const knownTitles = ["Share feedback", "Settings", "Mode", "Model & reasoning"];
+    const knownTitles = ["Share feedback", "Settings", ...topChromeTooltipTitles, ...footerTooltipTitles, "Show artifact files", ...messageTooltipTitles, "More options"];
     const english = knownTitles.find(value => [value, dictionary[value]].includes(title));
     if (!english) return null;
-    if (english === "Share feedback") {
-      if (focusable.children.length !== 1) return null;
-    } else {
+    if (focusable.children.length === 2) {
       const chord = focusable.children[1];
-      if (focusable.children.length !== 2 || !chord.matches("span[data-kbd-chord]") ||
+      if (!chord.matches("span[data-kbd-chord]") ||
           chord.childNodes.length !== chord.children.length || chord.children.length === 0 ||
           [...chord.children].some(child => !child.matches("kbd"))) return null;
     }
@@ -1088,8 +1485,38 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     }
   }
 
+  function modelTierLabel(item) {
+    const words = { balance: "Standard", hydrafusion: "High", "hydrafusion-max": "Max" };
+    const id = item?.getAttribute("data-auto-tier-id");
+    const word = Object.hasOwn(words, id) ? words[id] : null;
+    if (!word || !item.matches('div[role="menuitemradio"][id][aria-checked][aria-label][aria-describedby][aria-setsize][aria-posinset]') ||
+        item.children.length !== 2 || !item.parentElement?.matches('div[role="none"]') ||
+        !item.parentElement.parentElement?.matches('div[role="none"]')) return null;
+    const [icon, content] = item.children;
+    if (!icon.matches('span[aria-hidden="true"]') || icon.children.length !== 1 ||
+        icon.firstElementChild.tagName.toLowerCase() !== "svg") return null;
+    let leaf = content;
+    for (let depth = 0; depth < 2; depth++) {
+      if (!leaf.matches("span") || leaf.childNodes.length !== 1 ||
+          leaf.children.length !== 1) return null;
+      leaf = leaf.firstElementChild;
+    }
+    return leaf.matches("span") && usageLeafText(leaf) ? { leaf, word } : null;
+  }
+
   function chromePopupText(owner, element, text) {
     if (!owner || !element) return false;
+    if (owner.kind === "composerMode" && Object.hasOwn(modeTitles, text) &&
+        element.matches("span") && usageLeafText(element) &&
+        element.parentElement?.matches('[role="menuitemradio"]') &&
+        element.parentElement.firstElementChild === element) return true;
+    if (owner.kind === "composerModel") {
+      const item = element.closest("[data-auto-tier-id]");
+      const tier = modelTierLabel(item);
+      if (tier && tier.leaf === element && item.closest('[role="menu"]') === owner.popup) {
+        return text === tier.word;
+      }
+    }
     if (owner.kind === "sidebarNewSession") return sidebarSessionLabels(owner.popup).get(element) === text;
     if (owner.kind === "annotationTooltip") return owner.words.includes(text);
     if (owner.kind === "hoverTooltip") return element === owner.label && owner.words.includes(text);
@@ -1110,26 +1537,32 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           ["Ask before running tools.", "Uses AI to reduce approval prompts.", "Run tools without asking."].includes(text));
     }
     if (owner.kind === "composerEffort") {
-      const radio = element.parentElement;
+      const radio = element.closest('[role="menuitemradio"][aria-checked]');
       return owner.words.includes(text) && element.matches("span") &&
-        radio?.matches('[role="menuitemradio"][aria-checked]') &&
-        radio.parentElement?.matches('[role="group"]') &&
-        radio.parentElement.parentElement?.matches("[data-menu-has-radio-item]") &&
-        radio.parentElement.parentElement.parentElement?.parentElement === owner.popup &&
+        !!radio && radio.closest('[role="menu"]') === owner.popup &&
+        !element.closest('[aria-hidden="true"],[hidden]') &&
         !owner.popup.querySelector("[data-auto-tier-id]");
     }
     if (owner.kind === "composerModel" || owner.kind === "composerMode") {
-      const labels = menuRowLabels(element.closest('[role="menuitem"]'));
+      const item = element.closest('[role="menuitem"]');
+      const labels = menuRowLabels(item);
       const label = labels && visibleMenuLabel(labels[0]);
-      if (labels?.[0] === element && owner.kind === "composerModel" &&
-          ["Model", "Effort", "Context window", "Content window"].includes(text)) return true;
-      if (labels?.[0] === element && owner.kind === "composerMode" &&
-          text === "Tool permissions") return true;
-      if (labels?.[1] === element &&
-          ((owner.kind === "composerModel" && (label === "Effort" || label === dictionary.Effort) &&
-            chromeWords.composerEffort.includes(text)) ||
-           (owner.kind === "composerMode" && (label === "Tool permissions" || label === dictionary["Tool permissions"]) &&
-            chromeWords.composerPermissions.includes(text)))) return true;
+      if (labels && item.closest('[role="menu"]') === owner.popup) {
+        if (labels[0] === element && owner.kind === "composerModel" &&
+            ["Model", "Effort", "Context window", "Content window"].includes(text)) return true;
+        if (labels[0] === element && owner.kind === "composerMode" &&
+            text === "Tool permissions") return true;
+        if (labels[1] === element &&
+            ((owner.kind === "composerModel" && (label === "Effort" || label === dictionary.Effort) &&
+              chromeWords.composerEffort.includes(text)) ||
+             (owner.kind === "composerMode" && (label === "Tool permissions" || label === dictionary["Tool permissions"]) &&
+              chromeWords.composerPermissions.includes(text)))) return true;
+      }
+    }
+    if (owner.kind === "composerModel" &&
+        ["Retry", "Models will be available when the local session is running."].includes(text) &&
+        !element.closest('[role="menuitemradio"],[data-auto-tier-id],[data-user-content]')) {
+      return true;
     }
     if (owner.kind === "composerModelDetails") {
       return element.tagName === "P" &&
@@ -1164,13 +1597,317 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (["Prioritizes capable models for challenging tasks and deeper reasoning.",
       "Prioritizes the most capable models for the most demanding tasks and complex reasoning.",
       "Prioritizes versatile models for efficient everyday coding."].includes(text)) return false;
+    if (owner.kind.startsWith("sidebarSessionConfig")) {
+      const item = element.closest('[role="menuitem"],[role="menuitemradio"],[role="menuitemcheckbox"]');
+      return owner.words.includes(text) &&
+        !!item && item.closest('[role="menu"]') === owner.popup;
+    }
+    if (owner.kind === "sessionCopySubmenu" || owner.kind === "msgMore") {
+      const item = element.closest('[role="menuitem"]');
+      return owner.words.includes(text) &&
+        !!item && item.closest('[role="menu"]') === owner.popup;
+    }
+    if (owner.kind === "commandPalette") {
+      const item = element.closest('[role="option"]');
+      return owner.words.includes(text) && !!item && owner.popup.contains(item);
+    }
+    if (owner.kind === "composerEnvironment") {
+      const item = element.closest('[role="menuitem"],[role="menuitemradio"]');
+      return owner.words.includes(text) && !!item && item.closest('[role="menu"]') === owner.popup;
+    }
+    if (owner.kind === "selectionMenu") {
+      const item = element.closest('[role="menuitem"],button');
+      return owner.words.includes(text) &&
+        !!item && owner.popup.contains(item) &&
+        !element.closest('kbd,[data-kbd-chord],[aria-hidden="true"],[hidden]');
+    }
     if (owner.kind === "composerContext") {
       return owner.words.includes(text) && !!element.closest('[role="menuitem"]');
     }
     return owner.words.includes(text) && !!element.closest('[role="menuitem"]');
   }
 
+  const selectionMenuWords = ["Add to Side chat", "Add to side chat", "Quote", "Copy"];
+  const selectionKeycapRe = /^(?:(?:Ctrl|Control|Shift|Alt|Option|Meta|Cmd|Command|Win|Super|[A-Z0-9`+\-/,.\[\];'\\]|Enter|Tab|Esc|Space|Backspace)(?:\s*[+\-]\s*)?)+$/i;
+  const popupAncestorSelector = '[data-base-ui-portal],[role="menu"],[role="listbox"],[role="dialog"],[role="tooltip"],[role="toolbar"]';
+
+  function selectionItemTokens(item) {
+    const walker = document.createTreeWalker(item, 4);
+    const tokens = [];
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const hidden = node.parentElement?.closest('[aria-hidden="true"],[hidden],kbd,[data-kbd-chord]');
+      if (hidden && item.contains(hidden)) continue;
+      const trimmed = node.nodeValue.trim();
+      if (trimmed) tokens.push(trimmed);
+    }
+    return tokens;
+  }
+
+  function selectionMenuOwner(popup) {
+    if (!popup?.isConnected ||
+        !popup.matches('[role="menu"],[role="dialog"],[role="toolbar"]') ||
+        popup.hasAttribute("aria-labelledby") ||
+        popup.closest('[data-user-content],[contenteditable],[data-testid="conversation-body"],[data-settings-dialog-root],article') ||
+        popup.querySelector('input,textarea,select,h1,h2,h3,h4,dl,dt,dd,table,[contenteditable],[data-user-content]')) return null;
+    if (popup.hasAttribute("data-closed") || popup.closest("[data-closed],[hidden],[inert]")) return null;
+    if (popup.closest('[role="presentation"]') && !popup.hasAttribute("data-open") &&
+        !popup.closest('[role="presentation"][data-open]')) return null;
+    const inFloatingHost = !!popup.closest('[data-base-ui-portal],#portal-root') ||
+      popup.parentElement === document.body ||
+      popup.parentElement?.parentElement === document.body ||
+      !mainRoot?.contains(popup) ||
+      !popup.closest("header,nav,aside,footer");
+    if (!inFloatingHost) return null;
+    const items = [...popup.querySelectorAll('[role="menuitem"],button')];
+    if (items.length < 2 || items.length > 6) return null;
+    const matched = new Set();
+    for (const item of items) {
+      const tokens = selectionItemTokens(item);
+      if (!tokens.length) return null;
+      const canonical = selectionMenuWords.find(word => [word, dictionary[word]].includes(tokens[0]));
+      if (!canonical) return null;
+      if (tokens.length > 1 && !tokens.slice(1).every(token => selectionKeycapRe.test(token))) return null;
+      matched.add(canonical);
+    }
+    const walker = document.createTreeWalker(popup, 4);
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const parent = node.parentElement;
+      if (!parent || parent.closest('[role="menuitem"],button,[aria-hidden="true"],[hidden],kbd,[data-kbd-chord]')) continue;
+      if (node.nodeValue.trim()) return null;
+    }
+    if (!matched.has("Copy") ||
+        (!matched.has("Quote") && !matched.has("Add to Side chat") && !matched.has("Add to side chat"))) {
+      return null;
+    }
+    return { popup, words: selectionMenuWords, kind: "selectionMenu" };
+  }
+
+  function sessionContextOwner(popup) {
+    if (!popup?.isConnected ||
+        !popup.matches('div[role="menu"][id][data-open][data-base-ui-focusable][data-rootownerid]') ||
+        popup.hasAttribute("aria-labelledby") || popup.closest("[data-user-content],[contenteditable]")) return null;
+    const presentation = popup.parentElement;
+    const portalNode = presentation?.parentElement;
+    if (!presentation?.matches('div[role="presentation"][data-open][data-side="bottom"]') ||
+        !portalNode?.matches("div[id][data-base-ui-portal]") || portalNode.parentElement !== document.body) return null;
+    const items = [];
+    const mounts = [portalNode, presentation, popup];
+    for (const child of popup.children) {
+      if (child.matches('div[role="group"]')) {
+        mounts.push(child);
+        for (const member of child.children) {
+          if (!member.matches('div[role="menuitem"]')) return null;
+          items.push(member);
+        }
+      } else if (child.matches('div[role="none"][data-menu-separator]')) {
+        continue;
+      } else if (child.matches('div[role="menuitem"]')) {
+        items.push(child);
+      } else {
+        return null;
+      }
+    }
+    if (items.length < 6 || items.length > 12) return null;
+    const itemRules = [
+      { words: ["Rename"] },
+      { words: ["Customize...", "Customize…"], projectOnly: true },
+      { words: ["Settings"], projectOnly: true },
+      { words: ["Pin", "Unpin"], command: "session.pin.set" },
+      { words: ["Mark as unread", "Mark as read"], command: "session.read.set", projectOptional: true },
+      { words: ["Show in Explorer"], command: "session.reveal" },
+      { words: ["Share as secret gist"], command: "session.share-gist" },
+      { words: ["Copy"], submenu: true },
+      { words: ["Open in…", "Open in..."], submenu: true },
+      { words: ["New section"], projectOnly: true },
+      { words: ["Create nested session"] },
+      { words: ["Detach session"] },
+      { words: ["Archive", "Unarchive"], command: "session.archive", projectOptional: true },
+      { words: ["Delete"], command: "session.delete", projectOptional: true }
+    ];
+    const parsed = [];
+    let isProjectMenu = false;
+    for (const [index, item] of items.entries()) {
+      if (!item.matches('div[role="menuitem"][id][tabindex][aria-setsize][aria-posinset]') ||
+          item.getAttribute("aria-setsize") !== String(items.length) ||
+          item.getAttribute("aria-posinset") !== String(index + 1) ||
+          item.children.length < 2 || item.children.length > 3 ||
+          !item.firstElementChild.matches("span") ||
+          !item.firstElementChild.firstElementChild?.matches('svg[aria-hidden="true"]')) return null;
+      const isSubmenu = item.children.length === 3;
+      if (isSubmenu && (!item.matches('[aria-haspopup="menu"][aria-expanded]') ||
+          !item.children[2].matches('svg[aria-hidden="true"]'))) return null;
+      const content = item.children[1];
+      if (!content.matches("span")) return null;
+      const leaf = !isSubmenu && content.children.length === 1 ? content.firstElementChild : content;
+      if (!leaf?.matches("span") || (!isSubmenu && content.children.length > 1) || !usageLeafText(leaf)) return null;
+      const value = leaf.firstChild.nodeValue;
+      const rule = itemRules.find(candidate => Boolean(candidate.submenu) === isSubmenu &&
+        candidate.words.some(word => [word, dictionary[word]].includes(value)));
+      if (!rule) return null;
+      if (rule.projectOnly) isProjectMenu = true;
+      parsed.push({ item, content, leaf, rule, cmd: item.getAttribute("data-command") });
+    }
+    const labels = new Map();
+    const seenCanonicals = new Set();
+    for (const { item, content, leaf, rule, cmd } of parsed) {
+      if (rule.projectOnly && !isProjectMenu) return null;
+      if (rule.command) {
+        if (isProjectMenu && rule.projectOptional) {
+          if (cmd && cmd !== rule.command && !cmd.startsWith("project.")) return null;
+        } else if (cmd !== rule.command) return null;
+      } else if (cmd && !cmd.startsWith("session.") && (!isProjectMenu || !cmd.startsWith("project."))) {
+        return null;
+      }
+      seenCanonicals.add(rule.words[0]);
+      labels.set(leaf, rule.words);
+      mounts.push(item);
+      if (content !== leaf) mounts.push(content);
+    }
+    if (!seenCanonicals.has("Rename") || !seenCanonicals.has("Copy") || !seenCanonicals.has("Delete")) return null;
+    return { popup, labels, mounts, kind: "sessionContext" };
+  }
+
+  function feedbackPopupOwner(popup) {
+    if (!popup?.isConnected ||
+        !popup.matches('[role="dialog"][id][data-open][data-base-ui-focusable][data-f6-focus-trap]') ||
+        popup.closest("[data-user-content],[contenteditable]")) return null;
+    const presentation = popup.parentElement;
+    const portalNode = presentation?.parentElement;
+    if (!presentation?.matches('div[role="presentation"][data-open]') ||
+        !portalNode?.matches("div[data-base-ui-portal]") ||
+        portalNode.parentElement !== document.body) return null;
+    const triggers = [];
+    for (const root of chromeRoots) {
+      if (!root.isConnected || !root.matches("nav[data-sidebar-footer]")) continue;
+      for (const trigger of root.querySelectorAll(
+        'button[data-testid="sidebar-feedback-button"][aria-haspopup="dialog"][aria-expanded="true"][aria-controls]'
+      )) {
+        if (trigger.getAttribute("aria-controls") === popup.id &&
+            !trigger.closest("[data-user-content],[contenteditable]")) triggers.push(trigger);
+      }
+    }
+    if (triggers.length !== 1) return null;
+    const mounts = [popup, presentation, portalNode];
+    let shell = popup;
+    for (let depth = 0; depth < 3; depth++) {
+      if (shell.children.length !== 1 || !shell.firstElementChild.matches("div")) return null;
+      shell = shell.firstElementChild;
+      mounts.push(shell);
+    }
+    if (shell.children.length !== 3) return null;
+    const [label, description, actions] = shell.children;
+    if (!label.matches("label") || label.children.length !== 2 ||
+        !label.firstElementChild.matches("span") ||
+        !description.matches("p[id]") || !usageLeafText(description) ||
+        !actions.matches("div") || actions.children.length !== 2) return null;
+    const textarea = label.lastElementChild;
+    const placeholder = "What feedback would you like to share?";
+    const notice = "This will be posted as a public GitHub issue.";
+    if (!textarea.matches('textarea[data-selectable="true"][aria-describedby]') ||
+        !(textarea.getAttribute("aria-describedby") || "").split(/\s+/).includes(description.id) ||
+        ![placeholder, dictionary[placeholder]].includes(textarea.getAttribute("placeholder")) ||
+        ![notice, dictionary[notice]].includes(description.firstChild.nodeValue)) return null;
+    const labels = new Map([[description, notice]]);
+    for (const [index, word] of ["Cancel", "Share feedback"].entries()) {
+      const button = actions.children[index];
+      const content = button?.firstElementChild;
+      const leaf = content?.firstElementChild;
+      const shortcut = index === 1 && content?.children.length === 2 ? content.lastElementChild : null;
+      const chord = shortcut?.firstElementChild;
+      const fixedShortcut = shortcut?.matches('span[data-component="keyShortcut"]') &&
+        shortcut.children.length === 1 && chord?.matches('span[data-kbd-chord="true"]') &&
+        chord.children.length === 2 &&
+        [...chord.children].every(key => key.matches("kbd") && usageLeafText(key));
+      if (!button?.matches("button") || button.children.length !== 1 ||
+          !content?.matches('span[data-component="content"]') ||
+          content.children.length !== 1 && !fixedShortcut ||
+          !leaf?.matches('span[data-component="label"]') || !usageLeafText(leaf) ||
+          ![word, dictionary[word]].includes(leaf.firstChild.nodeValue) ||
+          index === 1 && !(button.getAttribute("aria-describedby") || "").split(/\s+/).includes(description.id)) return null;
+      labels.set(leaf, word);
+      mounts.push(button, content);
+    }
+    if ([shell, label, description, actions, textarea, ...labels.keys()].some(element =>
+      element.closest("[data-user-content],[contenteditable]"))) return null;
+    mounts.push(label, actions);
+    return { popup, trigger: triggers[0], textarea, placeholder, labels, mounts, kind: "feedback" };
+  }
+
+  function observeSessionContextBoundary(popup) {
+    if (sessionContextBoundaryObservers.has(popup)) return;
+    const boundaryObserver = new document.defaultView.MutationObserver(() => {
+      if (stopped) return;
+      if (!popup.isConnected) {
+        boundaryObserver.disconnect();
+        sessionContextBoundaryObservers.delete(popup);
+        stopObservingChromePopup(popup);
+      } else if (sessionContextOwner(popup)) {
+        scanOwnedPopup(popup);
+      } else {
+        stopObservingChromePopup(popup);
+      }
+    });
+    const presentation = popup.parentElement;
+    const portalNode = presentation.parentElement;
+    for (const boundary of [popup, presentation, portalNode]) {
+      boundaryObserver.observe(boundary, {
+        childList: true, attributes: true,
+        attributeFilter: ["id", "role", "data-open", "data-side", "data-base-ui-portal",
+          "data-base-ui-focusable", "data-rootownerid", "aria-labelledby",
+          "data-user-content", "contenteditable"]
+      });
+    }
+    sessionContextBoundaryObservers.set(popup, boundaryObserver);
+  }
+
   function observeChromePopup(popup) {
+    const sessionContext = sessionContextOwner(popup);
+    if (sessionContext) {
+      observeSessionContextBoundary(popup);
+      let popupObserver = chromePopupObservers.get(popup);
+      if (!popupObserver) {
+        popupObserver = new document.defaultView.MutationObserver(mutations);
+        chromePopupObservers.set(popup, popupObserver);
+      }
+      popupObserver.disconnect();
+      sessionContextPopups.add(popup);
+      for (const mount of sessionContext.mounts) popupObserver.observe(mount, {
+        childList: true, attributes: true,
+        attributeFilter: ["id", "role", "data-open", "data-side", "data-base-ui-focusable", "data-rootownerid",
+          "data-menu-separator", "data-command", "aria-setsize", "aria-posinset", "aria-haspopup",
+          "aria-expanded", "tabindex", "data-user-content", "contenteditable"]
+      });
+      for (const label of sessionContext.labels.keys()) {
+        popupObserver.observe(label, {
+          childList: true, attributes: true, attributeFilter: ["data-user-content", "contenteditable"]
+        });
+        popupObserver.observe(label.firstChild, { characterData: true });
+      }
+      return;
+    }
+    const feedback = feedbackPopupOwner(popup);
+    if (feedback) {
+      let popupObserver = chromePopupObservers.get(popup);
+      if (!popupObserver) {
+        popupObserver = new document.defaultView.MutationObserver(mutations);
+        chromePopupObservers.set(popup, popupObserver);
+      }
+      popupObserver.disconnect();
+      feedbackPopups.add(popup);
+      for (const mount of feedback.mounts) popupObserver.observe(mount, {
+        childList: true, attributes: true,
+        attributeFilter: ["id", "role", "data-open", "data-base-ui-focusable", "data-f6-focus-trap",
+          "data-component", "aria-describedby", "data-user-content", "contenteditable"]
+      });
+      for (const label of feedback.labels.keys()) popupObserver.observe(label, {
+        ...chromeObserverOptions, attributeFilter: [...chromeObserverOptions.attributeFilter, "data-component"]
+      });
+      popupObserver.observe(feedback.textarea, { attributes: true,
+        attributeFilter: ["placeholder", "aria-describedby", "data-selectable", "data-user-content", "contenteditable"] });
+      return;
+    }
     if (ownedPopup(popup)?.kind === "usage") {
       observeUsagePopup(popup);
       return;
@@ -1230,10 +1967,17 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     for (const [node, entry] of tracked) {
       if (popup.contains(node)) restore(node, entry);
     }
-    for (let i = queue.length - 1; i >= 0; i--) {
-      if (popup.contains(queue[i].node)) {
+    for (const [element, entries] of attributes) {
+      if (!popup.contains(element)) continue;
+      for (const [name, entry] of entries) {
+        if (element.getAttribute(name) === entry.translated) element.setAttribute(name, entry.original);
+      }
+      attributes.delete(element);
+    }
+    for (let i = queue.length - 1; i >= queueHead; i--) {
+      if (queue[i] && popup.contains(queue[i].node)) {
         queued.delete(queue[i].node);
-        queue.splice(i, 1);
+        queue[i] = null;
       }
     }
   }
@@ -1243,6 +1987,8 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (!popupObserver) return;
     popupObserver.disconnect();
     chromePopupObservers.delete(popup);
+    feedbackPopups.delete(popup);
+    sessionContextPopups.delete(popup);
     sidebarSessionBoundaries.delete(popup);
     usagePopupObserverStates.delete(popup);
     restorePopup(popup);
@@ -1251,21 +1997,35 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function scanChromePortal(portalNode) {
     if (!portalNode || portalNode.nodeType !== 1 || !portalNode.matches("[data-base-ui-portal]")) return;
     for (const popup of portalNode.querySelectorAll(
-      '[role="menu"][id][aria-labelledby],[role="dialog"][id][aria-labelledby],[role="tooltip"][id],' +
-      ':scope > div[role="presentation"][data-open][data-side="top"][data-align="center"]'
+      '[role="menu"],[role="dialog"],[role="toolbar"],[role="tooltip"][id],' +
+      ':scope > div[role="presentation"][data-open][data-side][data-align]'
     )) {
       const owner = ownedPopup(popup);
       if (!owner) continue;
       observeChromePopup(popup);
-      if (owner.kind !== "usage") scan(owner.kind === "hoverTooltip" ? owner.label : popup, "portal");
+      scanOwnedPopup(popup);
     }
   }
 
   function scanOwnedPopup(popup) {
     const owner = ownedPopup(popup);
     if (!owner) return;
-    if (owner.kind === "usage") {
+    if (owner.kind === "sessionContext") {
+      observeChromePopup(popup);
+      for (const label of owner.labels.keys()) scan(label, "portal");
+    } else if (owner.kind === "feedback") {
+      observeChromePopup(popup);
+      for (const label of owner.labels.keys()) scan(label, "portal");
+      translateAttribute(owner.textarea, "placeholder");
+    } else if (owner.kind === "usage") {
       observeUsagePopup(popup);
+    } else if (owner.kind === "commandPalette") {
+      observeChromePopup(popup);
+      const combobox = popup.querySelector('input[role="combobox"]');
+      if (combobox) translateAttribute(combobox, "placeholder");
+      for (const option of popup.querySelectorAll('[role="option"]')) {
+        scan(option, "portal");
+      }
     }
     else scan(owner.kind === "hoverTooltip" ? owner.label : popup, "portal");
   }
@@ -1273,7 +2033,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   function scanHoverTooltipForTrigger(trigger) {
     for (const portalNode of document.body.querySelectorAll(":scope > [data-base-ui-portal]")) {
       const popup = portalNode.querySelector(
-        ':scope > div[role="presentation"][data-open][data-side="top"][data-align="center"]'
+        ':scope > div[role="presentation"][data-open][data-side][data-align]'
       );
       const owner = popup && hoverTooltipOwner(popup);
       if (owner?.trigger === trigger) {
@@ -1304,12 +2064,16 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         !!element.closest("li > button") && root.contains(element.closest("li > button"));
     }
     if (root.matches("[data-testid=composer-pills]")) {
-      const button = element.closest("button[data-testid]");
-      if (!button || !root.contains(button)) return false;
-      return (button.matches('button[data-testid="background-activity-pill"][aria-controls="background-activity-list"]') &&
-          text === "Background") ||
-        (button.matches('button[data-testid="artifact-files-pill"][aria-controls="artifact-files-list"]') &&
-          text === "Artifacts");
+      const button = element.closest("button");
+      if (!button || !root.contains(button) || element.childElementCount) return false;
+      return ["Background", "Artifacts", "Changes", "Scheduled"].includes(text);
+    }
+    if (root.matches("[data-rich-composer-footer]") && Object.hasOwn(modeTitles, text) &&
+        element.matches("button") && usageLeafText(element) &&
+        composerMenuKind(element) === "composerMode") return true;
+    if (root.matches('aside[data-testid="chat-canvas-panel"]')) {
+      return chromeWords.workspacePanel.includes(text) &&
+        !element.closest('[data-user-content],[contenteditable],pre,code');
     }
     return false;
   }
@@ -1774,13 +2538,27 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const content = section?.firstElementChild;
     const heading = content?.firstElementChild?.querySelector(":scope > h2[data-section-heading='true']");
     const button = content?.querySelector(':scope > button');
-    if (!node?.isConnected || !dialog?.contains(section) || !paragraph?.matches("p") || paragraph.parentElement !== content ||
-        content.children.length !== 3 || content.children[0] !== heading?.parentElement ||
-        content.children[1] !== button || content.children[2] !== paragraph || !heading || !button ||
+    const header = heading?.parentElement;
+    const legacy = paragraph?.parentElement === content && content?.children.length === 3 &&
+      content.children[0] === header && content.children[1] === button && content.children[2] === paragraph;
+    const native = paragraph?.parentElement === header && content?.children.length === 2 &&
+      content.children[0] === header && content.children[1] === button &&
+      header.children.length === 2 && header.children[0] === heading && header.children[1] === paragraph;
+    if (!node?.isConnected || !dialog?.contains(section) || !paragraph?.matches("p") ||
+        paragraph.closest("[data-user-content],[contenteditable]") ||
+        !(legacy || native) || !heading || !button ||
         paragraph.childNodes.length !== 3 ||
         [...paragraph.childNodes].some(child => child.nodeType !== 3 || child.parentElement !== paragraph)) return null;
     const index = [...paragraph.childNodes].indexOf(node);
     return index >= 0 ? { index } : null;
+  }
+
+  function textStartsWith(node, value) {
+    return node.length >= value.length && node.substringData(0, value.length) === value;
+  }
+
+  function textEndsWith(node, value) {
+    return node.length >= value.length && node.substringData(node.length - value.length, value.length) === value;
   }
 
   function translateRemovalSummary(node) {
@@ -1793,37 +2571,34 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const originalSuffix = " from the sidebar. The repository on your machine stays, but session worktrees are deleted and recovering uncommitted work from them is manual.";
       const translatedPrefix = dictionary["Removes "];
       const translatedSuffix = dictionary[originalSuffix];
-      const current = node.nodeValue;
-      const prefixOwned = current.startsWith(originalPrefix) ||
-        saved?.kind === "removalSummary" && saved.prefixOwned && current.startsWith(translatedPrefix);
-      const suffixOwned = current.endsWith(originalSuffix) ||
-        saved?.kind === "removalSummary" && saved.suffixOwned && current.endsWith(translatedSuffix);
+      const prefixOwned = textStartsWith(node, originalPrefix) ||
+        saved?.kind === "removalSummary" && saved.prefixOwned && textStartsWith(node, translatedPrefix);
+      const suffixOwned = textEndsWith(node, originalSuffix) ||
+        saved?.kind === "removalSummary" && saved.suffixOwned && textEndsWith(node, translatedSuffix);
       if (!prefixOwned && !suffixOwned) {
         if (saved?.kind === "removalSummary") tracked.delete(node);
         return true;
       }
-      let translated = current;
       let ownsPrefix = false;
       let ownsSuffix = false;
-      if (current.startsWith(originalPrefix)) {
-        translated = translatedPrefix + translated.slice(originalPrefix.length);
+      if (textStartsWith(node, originalPrefix)) {
+        node.replaceData(0, originalPrefix.length, translatedPrefix);
         ownsPrefix = true;
       } else if (saved?.kind === "removalSummary" && saved.prefixOwned &&
-          current.startsWith(translatedPrefix)) {
+          textStartsWith(node, translatedPrefix)) {
         ownsPrefix = true;
       }
-      if (current.endsWith(originalSuffix)) {
-        translated = translated.slice(0, -originalSuffix.length) + translatedSuffix;
+      if (textEndsWith(node, originalSuffix)) {
+        node.replaceData(node.length - originalSuffix.length, originalSuffix.length, translatedSuffix);
         ownsSuffix = true;
       } else if (saved?.kind === "removalSummary" && saved.suffixOwned &&
-          current.endsWith(translatedSuffix)) {
+          textEndsWith(node, translatedSuffix)) {
         ownsSuffix = true;
       }
       tracked.set(node, {
         kind: "removalSummary", originalPrefix, translatedPrefix, prefixOwned: ownsPrefix,
         originalSuffix, translatedSuffix, suffixOwned: ownsSuffix
       });
-      if (translated !== current) node.nodeValue = translated;
       return true;
     }
     const original = "Its sessions, including ones started in Copilot CLI, are permanently deleted with their history. This can't be undone.";
@@ -2044,7 +2819,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       const rowDescription = row?.querySelector(":scope > p");
       if (element === rowTitle && ["Wait for checkout on new sessions", dictionary["Wait for checkout on new sessions"]].includes(text) ||
           element === rowDescription && ["Hold a new session's first turn until its worktree is checked out, so repository configuration, hooks, extensions, canvases, and language-server configuration are available. Setup scripts still run asynchronously. This can be slow on large repositories.",
-            dictionary["Hold a new session's first turn until its worktree is checked out, so repository configuration, hooks, extensions, canvases, and language-server configuration are available. This can be slow on large repositories."]].includes(text)) return true;
+            dictionary["Hold a new session's first turn until its worktree is checked out, so repository configuration, hooks, extensions, canvases, and language-server configuration are available. Setup scripts still run asynchronously. This can be slow on large repositories."]].includes(text)) return true;
     }
     if (id === "project-automation") {
       const header = section.firstElementChild;
@@ -2204,6 +2979,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         element.matches('li[id$="-option-computer-use"] > button > div[data-trailing-visual] > span')) {
       return "预览";
     }
+    if (text === "Plan" && (element.closest('[data-testid="customize-category-filter"]') || element.id === "browse-integrations-heading")) {
+      return "规划";
+    }
     return null;
   }
 
@@ -2216,7 +2994,43 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   }
 
   function ownedPopup(element) {
-    if (!element) return false;
+    if (!element?.closest?.(popupAncestorSelector)) return false;
+    const contextPopup = element.closest('div[role="menu"][id][data-rootownerid]');
+    const contextOwner = contextPopup && sessionContextOwner(contextPopup);
+    if (contextOwner) return contextOwner;
+    const copySubmenu = element.closest('div[role="menu"][id][aria-labelledby]');
+    if (copySubmenu) {
+      const triggerId = copySubmenu.getAttribute("aria-labelledby");
+      const copyTrigger = triggerId && document.getElementById(triggerId);
+      const parentMenu = copyTrigger?.closest('div[role="menu"][id][data-rootownerid]');
+      if (parentMenu && sessionContextOwner(parentMenu)) {
+        const leaf = copyTrigger.querySelector("span > span");
+        const triggerLabel = leaf ? leaf.textContent.trim() : copyTrigger.textContent.trim();
+        if (triggerLabel === "Copy" || triggerLabel === dictionary.Copy) {
+          return { popup: copySubmenu, words: ["Session name", "Session ID", "Project name", "Project ID", "Path", "Copy branch"], kind: "sessionCopySubmenu" };
+        }
+      }
+    }
+    const commandPaletteDialog = element.closest('div[role="dialog"]');
+    if (commandPaletteDialog) {
+      const combobox = commandPaletteDialog.querySelector('input[role="combobox"]');
+      const placeholder = combobox?.getAttribute("placeholder") || "";
+      if (placeholder.startsWith("Search projects, repositories") || placeholder.startsWith("Search sessions, repos") ||
+          placeholder === dictionary["Search projects, repositories, PRs, issues, or paste a URL…"] ||
+          placeholder === dictionary["Search sessions, repos, PRs, issues, or paste a URL…"]) {
+        const option = element.closest('[role="option"]');
+        if (element === commandPaletteDialog || (option && commandPaletteDialog.contains(option))) {
+          return {
+            popup: commandPaletteDialog,
+            words: ["Switch model", "Set thinking effort", "Check for updates", "Resume remote session", "Resume session by ID", "New session", "New project", "New issue", "Undo"],
+            kind: "commandPalette"
+          };
+        }
+      }
+    }
+    const feedbackPopup = element.closest('[role="dialog"][id][data-f6-focus-trap]');
+    const feedbackOwner = feedbackPopup && feedbackPopupOwner(feedbackPopup);
+    if (feedbackOwner) return feedbackOwner;
     const usagePopup = element.closest('[role="dialog"][id][aria-labelledby]');
     const usageOwner = usagePopup && usagePopupOwner(usagePopup);
     if (usageOwner) return usageOwner;
@@ -2249,6 +3063,9 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       }
       return null;
     }
+    const selectionPopup = element.closest('[role="menu"],[role="dialog"],[role="toolbar"]');
+    const selectionOwner = selectionPopup && selectionMenuOwner(selectionPopup);
+    if (selectionOwner) return selectionOwner;
     const popup = element.closest('[role="listbox"][id],[role="menu"][aria-labelledby]');
     if (!popup) return null;
     const role = popup.getAttribute("role");
@@ -2314,6 +3131,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     }
     if (kind && popup.getAttribute("role") === "menu" && popup.id &&
         trigger.getAttribute("aria-controls") === popup.id &&
+        popup.getAttribute("aria-labelledby") === trigger.id &&
         popup.hasAttribute("data-open") && popup.hasAttribute("data-rootownerid") &&
         presentation?.matches('[role="presentation"][data-open]') &&
         portalWrapper?.matches("[data-base-ui-portal]")) {
@@ -2370,52 +3188,71 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const element = node.parentElement;
     if (!element || !node.isConnected || (dialog && !dialog.isConnected)) return false;
     if (element.closest("input,textarea,select,code,kbd,samp,pre,[contenteditable],[data-user-content],#shortcut-announce-polite,#shortcut-announce-assertive")) return false;
-    if (element.closest('p[data-selectable="true"],[aria-live], [data-testid$="announce"],' +
-        'section[data-testid="project-mcp-section"] ul,section[data-testid="project-plugins"] ul,' +
-        'div[data-testid="project-plugins"] ul,' +
-        'section[data-section-id="project-scripts"] ul')) return false;
-    const projectSection = element.closest("section[data-section-id]");
-    const projectId = projectSection?.getAttribute("data-section-id");
-    if (projectId === "project-github-account" &&
-        !projectSection.firstElementChild?.firstElementChild?.contains(element)) return false;
-    if (projectId === "project-scripts") {
-      const owner = projectSection.firstElementChild;
-      const header = owner?.firstElementChild;
-      const action = owner?.lastElementChild?.querySelector(
-        'button > span[data-component="content"] > span[data-component="label"]'
-      );
-      if (!header?.contains(element) && element !== action) return false;
-    }
-    if (projectId === "project-default-branch" &&
-        !projectSection.firstElementChild?.firstElementChild?.contains(element)) return false;
-    if (projectId === "project-branch-prefix") {
-      const preview = element.closest('p[id$="-branch-prefix-preview"]');
-      if (preview ? element !== preview : !projectSection.firstElementChild?.firstElementChild?.contains(element)) return false;
-    }
-    if (projectId === "project-sandbox-policy" && element.closest("li") && policyItem(element) === null) return false;
-    if (projectId === "project-sparse-checkout" && element.closest("ul,li")) return false;
-    if (policyItem(element) === 1) return false;
-    if (element.closest('[data-testid^="github-account-card-"]') && !accountFixedSlot(element)) return false;
-    const removalSlot = removalSummarySlot(node);
-    if (removalSlot) return removalSlot.index !== 1;
-    const scroll = element.closest("[data-settings-scroll]");
-    if (scroll && !scroll.hasAttribute("aria-label") &&
-        !projectSections.has(element.closest("[data-section-id]")?.getAttribute("data-section-id")) &&
-        !element.closest('[data-section-id="accessibility-announcements"],section[data-testid="project-mcp-section"],section[data-testid="project-plugins"]')) return false;
     const prior = tracked.get(node);
     const text = (prior && node.nodeValue === prior.translated ? prior.original : node.nodeValue).trim();
+    if (!text) return false;
     if (isColorPreviewText(element, text)) return true;
-    if (text === "Auto") {
-      const button = element.parentElement?.parentElement;
-      return !!dialog?.contains(element) && element.matches('span[data-component="label"]') &&
-        element.parentElement.matches('span[data-component="content"]') &&
-        !!button?.matches('button[aria-haspopup="dialog"][id]') &&
-        !!button.closest('section[data-section-id="voice-mode-language"]');
+    const inDialog = !!dialog?.contains(element);
+    if (inDialog) {
+      if (element.closest('p[data-selectable="true"],[aria-live], [data-testid$="announce"],' +
+          'section[data-testid="project-mcp-section"] ul,section[data-testid="project-plugins"] ul,' +
+          'div[data-testid="project-plugins"] ul,' +
+          'section[data-section-id="project-scripts"] ul')) return false;
+      const projectSection = element.closest("section[data-section-id]");
+      const projectId = projectSection?.getAttribute("data-section-id");
+      if (projectId === "project-github-account" &&
+          !projectSection.firstElementChild?.firstElementChild?.contains(element)) return false;
+      if (projectId === "project-scripts") {
+        const owner = projectSection.firstElementChild;
+        const header = owner?.firstElementChild;
+        const action = owner?.lastElementChild?.querySelector(
+          'button > span[data-component="content"] > span[data-component="label"]'
+        );
+        if (!header?.contains(element) && element !== action) return false;
+      }
+      if (projectId === "project-default-branch" &&
+          !projectSection.firstElementChild?.firstElementChild?.contains(element)) return false;
+      if (projectId === "project-branch-prefix") {
+        const preview = element.closest('p[id$="-branch-prefix-preview"]');
+        if (preview ? element !== preview : !projectSection.firstElementChild?.firstElementChild?.contains(element)) return false;
+      }
+      if (projectId === "project-sandbox-policy" && element.closest("li") && policyItem(element) === null) return false;
+      if (projectId === "project-sparse-checkout" && element.closest("ul,li")) return false;
+      if (policyItem(element) === 1) return false;
+      if (element.closest('[data-testid^="github-account-card-"]') && !accountFixedSlot(element)) return false;
+      const removalSlot = removalSummarySlot(node);
+      if (removalSlot) return removalSlot.index !== 1;
+      const scroll = element.closest("[data-settings-scroll]");
+      if (scroll && !scroll.hasAttribute("aria-label") &&
+          !projectSections.has(projectId) &&
+          !element.closest('[data-section-id="accessibility-announcements"],section[data-testid="project-mcp-section"],section[data-testid="project-plugins"]')) return false;
+      const splitRoot = element.closest("p,h3");
+      const splitSection = splitRoot?.closest("[data-section-id]")?.getAttribute("data-section-id");
+      const splitPattern = splitPatterns.find(pattern => pattern.section === splitSection &&
+        pattern.tag === splitRoot?.tagName && pattern.original.some(fragment => fragment.trim() === text));
+      if (splitPattern) {
+        const walker = document.createTreeWalker(splitRoot, 4);
+        const fragments = [];
+        while (walker.nextNode()) fragments.push(walker.currentNode);
+        if (fragments.length !== splitPattern.parents.length ||
+            !fragments.every((fragment, index) =>
+              fragment.parentElement.matches(splitPattern.parents[index].toLowerCase()) &&
+              (fragment.nodeValue === splitPattern.original[index] || fragment.nodeValue === splitPattern.translated[index]))) return false;
+      }
+      if (text === "Auto") {
+        const button = element.parentElement?.parentElement;
+        return element.matches('span[data-component="label"]') &&
+          element.parentElement.matches('span[data-component="content"]') &&
+          !!button?.matches('button[aria-haspopup="dialog"][id]') &&
+          !!button.closest('section[data-section-id="voice-mode-language"]');
+      }
+      if (isAccountSettingsText(element, text) || isNavLabel(element) || isFixedRowText(element, text) || isFixedHeader(element) ||
+          isFixedChoice(element, text) || isFixedAction(element, text)) return true;
     }
-    if (dialog?.contains(element) && (isAccountSettingsText(element, text) || isNavLabel(element) || isFixedRowText(element, text) || isFixedHeader(element) ||
-        isFixedChoice(element, text) || isFixedAction(element, text))) return true;
     if (isChromeText(element, text)) return true;
     const owner = ownedPopup(element);
+    if (owner?.kind === "sessionContext") return owner.labels.get(element)?.includes(text) || false;
+    if (owner?.kind === "feedback") return owner.labels.get(element) === text;
     if (owner?.kind === "settingsColorFilter") return isColorFilterPopupText(owner, element, text);
     if (owner?.kind === "settings" && owner.section === "sessions-default-model") {
       return isModelPopupChoice(element, text);
@@ -2439,14 +3276,12 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       return;
     }
     if (entry.kind === "removalSummary") {
-      let value = node.nodeValue;
-      if (entry.prefixOwned && value.startsWith(entry.translatedPrefix)) {
-        value = entry.originalPrefix + value.slice(entry.translatedPrefix.length);
+      if (entry.prefixOwned && textStartsWith(node, entry.translatedPrefix)) {
+        node.replaceData(0, entry.translatedPrefix.length, entry.originalPrefix);
       }
-      if (entry.suffixOwned && value.endsWith(entry.translatedSuffix)) {
-        value = value.slice(0, -entry.translatedSuffix.length) + entry.originalSuffix;
+      if (entry.suffixOwned && textEndsWith(node, entry.translatedSuffix)) {
+        node.replaceData(node.length - entry.translatedSuffix.length, entry.translatedSuffix.length, entry.originalSuffix);
       }
-      if (value !== node.nodeValue) node.nodeValue = value;
       tracked.delete(node);
       return;
     }
@@ -2515,15 +3350,29 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function translate(node) {
     if (node.nodeType !== 3) return;
-    if (translateRemovalSummary(node)) return;
-    if (translatePolicySummarySlot(node)) return;
-    if (isShortcutCountNumber(node)) return;
-    if (translateShortcutCount(node)) return;
-    if (translatePolicySummaryLine(node)) return;
+    const tierItem = node.parentElement?.closest("[data-auto-tier-id]");
+    if (tierItem && modelTierLabel(tierItem)?.leaf !== node.parentElement) return;
+    const inDialog = !!dialog?.contains(node.parentElement);
+    if (inDialog) {
+      if (translateRemovalSummary(node)) return;
+      if (translatePolicySummarySlot(node)) return;
+      if (isShortcutCountNumber(node)) return;
+      if (translateShortcutCount(node)) return;
+      if (translatePolicySummaryLine(node)) return;
+    }
     const prior = tracked.get(node);
+    const raw = node.nodeValue;
+    const trimmed = raw.trim();
+    if (!trimmed && !prior) return;
     if (prior?.group) {
       if (validGroup(prior.group)) return;
       restore(node, prior);
+    }
+    if (!inDialog && !prior && !options.measure &&
+        !Object.hasOwn(dictionary, trimmed) &&
+        !Object.hasOwn(modeTitles, trimmed) &&
+        !Object.hasOwn(permissionTitles, trimmed)) {
+      return;
     }
     if (!eligible(node)) {
       const saved = tracked.get(node);
@@ -2531,18 +3380,22 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       return;
     }
     const saved = tracked.get(node);
-    if (saved && node.nodeValue === saved.translated) return;
+    if (saved && raw === saved.translated) return;
     if (saved) tracked.delete(node);
-    if (translateSplitParagraph(node)) return;
-    const parts = /^(\s*)(.*?)(\s*)$/s.exec(node.nodeValue);
+    if (inDialog && translateSplitParagraph(node)) return;
+    const parts = /^(\s*)(.*?)(\s*)$/s.exec(raw);
     const owner = ownedPopup(node.parentElement);
+    const modeTitle = parts && Object.hasOwn(modeTitles, parts[2]) &&
+      (owner?.kind === "composerMode" || composerMenuKind(node.parentElement) === "composerMode")
+      ? modeTitles[parts[2]] : null;
     const labels = owner?.kind === "composerMode" && nestedMenuLabels(node.parentElement.closest('[role="menuitem"]'));
     const selectedPermission = labels?.[1] === node.parentElement &&
       ["Tool permissions", dictionary["Tool permissions"]].includes(visibleMenuLabel(labels[0]));
     const permissionTitle = parts && (owner?.kind === "composerPermissions" || selectedPermission) &&
       Object.hasOwn(permissionTitles, parts[2]) ? permissionTitles[parts[2]] : null;
-    const value = permissionTitle || (parts && (Object.hasOwn(dictionary, parts[2])
-      ? dictionary[parts[2]] : specialTranslation(node, parts[2])));
+    const special = parts && specialTranslation(node, parts[2]);
+    const value = modeTitle || permissionTitle || special || (parts && (Object.hasOwn(dictionary, parts[2])
+      ? dictionary[parts[2]] : null));
     if (!value || value === parts[2]) {
       if (options.measure && parts?.[2] && !Object.hasOwn(dictionary, parts[2]) && !unmatched.has(node)) {
         unmatched.add(node);
@@ -2550,11 +3403,38 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
       }
       return;
     }
-    const accountFragment = node.parentElement.matches("p") && accountFixedSlot(node.parentElement)?.includes(parts[2]);
+    const accountFragment = inDialog && node.parentElement.matches("p") && accountFixedSlot(node.parentElement)?.includes(parts[2]);
     const translated = (accountFragment && /^[，。！？；：]/u.test(value) ? "" : parts[1]) + value + parts[3];
     tracked.set(node, { original: node.nodeValue, translated });
     node.nodeValue = translated;
   }
+
+  const chromeAriaLabels = new Set([
+    "Configure sessions",
+    "Share feedback",
+    "Share feedback, Control + Enter",
+    "Back",
+    "Back, Ctrl + Left bracket",
+    "Forward",
+    "Forward, Ctrl + Right bracket",
+    "Toggle sidebar",
+    "Toggle sidebar, Ctrl + B",
+    "Search",
+    "Search, Ctrl + K",
+    "Settings",
+    "Settings, Ctrl + Comma",
+    "Resize sidebar",
+    "New session",
+    "New chat",
+    "Environment: This computer",
+    "Environment: Cloud",
+    "Repository: Chat",
+    "Mode: Interactive, Ctrl + Shift + M",
+    "Start voice recording, Control + Alt + Space",
+    "More response actions",
+    "More options",
+    "Dismiss Copilot Fusion Standard, High, and Max promotion"
+  ]);
 
   function translateAttribute(element, name) {
     if (name === "aria-label" &&
@@ -2564,13 +3444,28 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     }
     const prior = attributes.get(element)?.get(name);
     const pageRule = pageControls.get(element);
+    const pageRuleCandidate = pageRule?.attribute === name;
     const settingsField = dialog?.contains(element) &&
       (element.matches('nav input[role="searchbox"]') ||
         element.matches("button") && element.closest("[data-settings-topbar],[data-section-id=general-workspace-location]"));
     const repositoryInstructions = name === "placeholder" && isProjectInstructionInput(element);
-    if (!prior && !settingsField && !repositoryInstructions && pageRule?.attribute !== name) return;
+    const feedbackField = name === "placeholder" && feedbackPopupOwner(element.closest('[role="dialog"]'))?.textarea === element;
+    const chromeButtonCandidate = !stopped && name === "aria-label" &&
+      !element.closest('[data-user-content],[contenteditable],[data-testid="conversation-body"]') &&
+      (element.matches('button,div[role="separator"],[data-sidebar-resize-handle]') ||
+        chromeRoots.has(element) || chromeRootFor(element));
+    const commandInputCandidate = !stopped && name === "placeholder" &&
+      element.matches('div[role="dialog"] input[role="combobox"]');
+    if (!prior && !settingsField && !repositoryInstructions && !feedbackField && !pageRuleCandidate && !chromeButtonCandidate && !commandInputCandidate) return;
+
     const current = element.getAttribute(name);
+    if (!current) return;
     const original = prior && current === prior.translated ? prior.original : current;
+    const chromeButton = chromeButtonCandidate && chromeAriaLabels.has(original);
+    const commandInput = commandInputCandidate &&
+      (original.startsWith("Search projects, repositories") || original.startsWith("Search sessions, repos") ||
+        original === "Search projects, repositories, PRs, issues, or paste a URL…");
+    if (!prior && !settingsField && !repositoryInstructions && !feedbackField && !chromeButton && !commandInput && !pageRuleCandidate) return;
     const search = element.matches('nav input[role="searchbox"]') &&
       ["placeholder", "aria-label"].includes(name);
     const close = name === "aria-label" && original === "Close dialog" &&
@@ -2578,9 +3473,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     const locationAction = name === "aria-label" &&
       ["Reset to default location", "Copy path", "Show in Explorer"].includes(original) &&
       element.matches("button") && element.closest('[data-section-id="general-workspace-location"]');
-    const eligible = repositoryInstructions || (dialog && dialog.contains(element) && (search || close || locationAction)) ||
+    const eligible = !stopped && (repositoryInstructions || feedbackField || chromeButton || commandInput ||
+      (dialog && dialog.contains(element) && (search || close || locationAction)) ||
       (pageRule?.attribute === name && validPageControl(element, pageRule) &&
-        pageRule.words.includes(original) && !element.closest("[data-user-content]"));
+        pageRule.words.includes(original) && !element.closest("[data-user-content],[data-testid=conversation-body]")));
     if (!eligible) {
       if (prior && current === prior.translated) element.setAttribute(name, prior.original);
       attributes.get(element)?.delete(name);
@@ -2622,28 +3518,40 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (queued.has(node)) return;
     queued.add(node);
     queue.push({ node, walker: node.nodeType === 1 && !pageControls.get(node)?.attribute
-      ? document.createTreeWalker(node, 5) : null, rootProcessed: false });
-    if (timer === null) timer = document.defaultView.setTimeout(drain, 0);
+      ? document.createTreeWalker(node, 5) : null, rootProcessed: false, verifiedEpoch: 0 });
+    scheduleDrain();
   }
 
+  let drainEpoch = 0;
   function drain() {
     timer = null;
+    const epoch = ++drainEpoch;
     const clock = document.defaultView.performance;
     const start = clock.now();
-    let remaining = 150;
-    while (queue.length && remaining > 0 && clock.now() - start < 4) {
-      const task = queue[0];
+    const budgetMs = initialDrainDone ? 5 : 12;
+    let remaining = initialDrainDone ? 400 : 1200;
+    initialDrainDone = true;
+    while (queueHead < queue.length && remaining > 0 && clock.now() - start < budgetMs) {
+      const task = queue[queueHead];
+      if (!task) { queueHead++; continue; }
       const element = task.node.nodeType === 3 ? task.node.parentElement : task.node;
-      if (!task.node.isConnected ||
-          (!dialog?.contains(element) && !chromeRootFor(element) && !ownedPopup(element) &&
-            !(colorPreviewFrame?.isConnected && colorPreviewList?.contains(element)))) {
-        queue.shift();
+      if (!task.node.isConnected) {
+        queue[queueHead++] = null;
         queued.delete(task.node);
         continue;
       }
+      if (task.verifiedEpoch !== epoch) {
+        if (!dialog?.contains(element) && !chromeRootFor(element) && !ownedPopup(element) &&
+            !(colorPreviewFrame?.isConnected && colorPreviewList?.contains(element))) {
+          queue[queueHead++] = null;
+          queued.delete(task.node);
+          continue;
+        }
+        task.verifiedEpoch = epoch;
+      }
       if (task.node.nodeType === 3) {
         translate(task.node);
-        queue.shift();
+        queue[queueHead++] = null;
         queued.delete(task.node);
         remaining--;
         continue;
@@ -2652,26 +3560,41 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         task.rootProcessed = true;
         const rule = pageControls.get(task.node);
         if (rule?.attribute) translateAttribute(task.node, rule.attribute);
-        if (task.node.matches('input[role="searchbox"],button[aria-label],textarea')) {
-          for (const name of ["placeholder", "aria-label"]) translateAttribute(task.node, name);
+        if (task.node.hasAttributes() && task.node.matches(attrTargetSelector)) {
+          for (const name of ["placeholder", "aria-label", "data-placeholder"]) {
+            if (task.node.hasAttribute(name)) translateAttribute(task.node, name);
+          }
         }
       }
       const node = task.walker?.nextNode();
-      if (!node) { queue.shift(); queued.delete(task.node); continue; }
+      if (!node) { queue[queueHead++] = null; queued.delete(task.node); continue; }
       if (node.nodeType === 3) translate(node);
-      else if (node.matches('input[role="searchbox"],button[aria-label],textarea')) {
-        for (const name of ["placeholder", "aria-label"]) translateAttribute(node, name);
+      else if (node.hasAttributes() && node.matches(attrTargetSelector)) {
+        for (const name of ["placeholder", "aria-label", "data-placeholder"]) {
+          if (node.hasAttribute(name)) translateAttribute(node, name);
+        }
       }
       remaining--;
+    }
+    if (queueHead >= queue.length) {
+      queue.length = 0;
+      queueHead = 0;
+    } else if (queueHead > 128) {
+      queue.splice(0, queueHead);
+      queueHead = 0;
     }
     if (options.measure) {
       stats.batchMs.push(clock.now() - start);
       if (stats.batchMs.length > 512) stats.batchMs.shift();
     }
-    if (queue.length && !stopped) timer = document.defaultView.setTimeout(drain, 0);
+    if (queueHead < queue.length && !stopped) scheduleDrain();
   }
 
   function ownedPopupForTrigger(trigger) {
+    if (trigger.matches('button[data-testid="sidebar-feedback-button"][aria-haspopup="dialog"][aria-expanded="true"][aria-controls]')) {
+      const popup = document.getElementById(trigger.getAttribute("aria-controls"));
+      return popup && feedbackPopupOwner(popup)?.trigger === trigger ? popup : null;
+    }
     const usageTrigger = usageTriggerOwner(trigger);
     if (usageTrigger && trigger.getAttribute("aria-expanded") === "true") {
       const controlled = trigger.getAttribute("aria-controls");
@@ -2697,6 +3620,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
 
   function restoreTracked() {
     queue.length = 0;
+    queueHead = 0;
     queued.clear();
     if (timer !== null) document.defaultView.clearTimeout(timer);
     timer = null;
@@ -2736,8 +3660,25 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
     if (dialog && (!dialog.isConnected || !dialog.matches("[data-settings-dialog-root][role=dialog]"))) activate(null);
     const changedText = new Set();
     let ownershipChanged = false;
+    let popupOwnershipChanged = false;
     let refreshColorPreview = false;
+    let needsRefreshPage = false;
+    let needsPruneChrome = false;
     for (const record of records) {
+      const contextPopup = sessionContextPopups.size
+        ? [...sessionContextPopups].find(popup => popup.contains(record.target)) : null;
+      if (contextPopup) {
+        if (sessionContextOwner(contextPopup)) scanOwnedPopup(contextPopup);
+        else stopObservingChromePopup(contextPopup);
+        continue;
+      }
+      const feedbackPopup = feedbackPopups.size
+        ? [...feedbackPopups].find(popup => popup.contains(record.target)) : null;
+      if (feedbackPopup) {
+        if (feedbackPopupOwner(feedbackPopup)) scanOwnedPopup(feedbackPopup);
+        else stopObservingChromePopup(feedbackPopup);
+        continue;
+      }
       if (dialog?.contains(record.target) && (record.type === "childList" || record.type === "attributes")) {
         colorFilterCache = null;
         colorFilterCacheDirty = true;
@@ -2747,19 +3688,19 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         ownershipChanged = true;
         const sidebar = record.target.closest("[data-sidebar-live-width]");
         if (sidebar) discoverSidebarStatic(sidebar);
-        removeDisconnectedChromeRoots();
+        needsPruneChrome = true;
         continue;
       }
       if (pageBoundaryObservers.has(record.target) || emptyMessageRoots.has(record.target.parentElement)) {
         ownershipChanged = true;
-        refreshPageControls();
+        needsRefreshPage = true;
         continue;
       }
       if (sidebarBoundaryObservers.has(record.target)) {
         ownershipChanged = true;
         const sidebar = record.target.closest("[data-sidebar-live-width]");
         if (sidebar) discoverSidebarNavigation(sidebar);
-        removeDisconnectedChromeRoots();
+        needsPruneChrome = true;
         continue;
       }
       if (record.type === "childList" && colorPreviewList?.contains(record.target)) {
@@ -2782,18 +3723,19 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         }
       }
       if (record.type === "characterData") {
-        const policySlot = policySummarySlot(record.target);
+        const policySlot = dialog ? policySummarySlot(record.target) : null;
         if ([1, 4, 7].includes(policySlot?.index)) continue;
-        if (pageControls.get(record.target.parentElement)?.workHeading) {
+        const pageRule = pageControls.get(record.target.parentElement);
+        if (pageRule?.workHeading || pageRule?.customizeHeading) {
           ownershipChanged = true;
-          refreshPageControls();
+          needsRefreshPage = true;
         }
         const item = record.target.parentElement?.closest('[role="menuitem"][aria-haspopup="menu"][id]');
         if (nestedMenuLabels(item)?.includes(record.target.parentElement)) ownershipChanged = true;
         const prior = tracked.get(record.target);
         const translationStillPresent = prior?.kind === "removalSummary"
-          ? (!prior.prefixOwned || record.target.nodeValue.startsWith(prior.translatedPrefix)) &&
-            (!prior.suffixOwned || record.target.nodeValue.endsWith(prior.translatedSuffix))
+          ? (!prior.prefixOwned || textStartsWith(record.target, prior.translatedPrefix)) &&
+            (!prior.suffixOwned || textEndsWith(record.target, prior.translatedSuffix))
           : prior && record.target.nodeValue === prior.translated;
         if (!translationStillPresent) changedText.add(record.target);
       } else if (record.type === "childList") {
@@ -2810,23 +3752,36 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           continue;
         }
         if (record.target.nodeType === 1 && record.removedNodes.length &&
-            record.target.matches(annotationMountSelectors[0])) removeDisconnectedChromeRoots();
-        if (record.target.nodeType === 1 && discoverAnnotationMounts(record.target)) {
-          removeDisconnectedChromeRoots();
+            record.target.matches(annotationMountSelectors[0])) needsPruneChrome = true;
+        if (portal && portal.contains(record.target) && record.target.nodeType === 1 && discoverAnnotationMounts(record.target)) {
+          needsPruneChrome = true;
           continue;
         }
         if (record.target === portal) {
           for (const node of record.addedNodes) if (node.nodeType === 1) discoverChromeRoots(node);
-          removeDisconnectedChromeRoots();
+          needsPruneChrome = true;
         }
         if (record.target === document.body) {
           for (const node of record.addedNodes) {
             scanChromePortal(node);
-            if (node.nodeType === 1) discoverChromeRoots(node);
+            if (node.nodeType === 1 && !node.matches("[data-base-ui-portal]")) discoverChromeRoots(node);
           }
-          removeDisconnectedChromeRoots();
+          if (!needsPruneChrome && record.removedNodes.length) {
+            for (const node of record.removedNodes) {
+              if (node.nodeType === 1 && !node.matches("[data-base-ui-portal]")) {
+                needsPruneChrome = true;
+                break;
+              }
+            }
+          }
           for (const popup of chromePopupObservers.keys()) {
             if (!popup.isConnected) stopObservingChromePopup(popup);
+          }
+          for (const [popup, boundaryObserver] of sessionContextBoundaryObservers) {
+            if (!popup.isConnected) {
+              boundaryObserver.disconnect();
+              sessionContextBoundaryObservers.delete(popup);
+            }
           }
           continue;
         }
@@ -2834,7 +3789,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           for (const node of record.addedNodes) {
             if (node.nodeType === 1) discoverChromeRoots(node);
           }
-          removeDisconnectedChromeRoots();
+          needsPruneChrome = true;
           continue;
         }
         for (const node of record.addedNodes) {
@@ -2847,32 +3802,47 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
               scanChromePortal(node);
               continue;
             }
-            const popups = node.matches('[role="listbox"],[role="menu"]') ? [node] : node.querySelectorAll('[role="listbox"],[role="menu"]');
-            for (const popup of popups) {
-              if (ownedPopup(popup)) {
-                observeChromePopup(popup);
-                scan(popup, "portal");
+            if (!record.target.closest?.('[data-user-content],[contenteditable]')) {
+              const popups = node.matches('[role="listbox"],[role="menu"],[role="dialog"],[role="toolbar"]')
+                ? [node]
+                : node.querySelectorAll('[role="listbox"],[role="menu"],[role="dialog"],[role="toolbar"]');
+              for (const popup of popups) {
+                if (ownedPopup(popup)) {
+                  observeChromePopup(popup);
+                  scan(popup, "portal");
+                }
               }
             }
           }
         }
       } else if (record.type === "attributes") {
-        if (["role", "data-testid", "data-open", "data-image-preview-dialog", "data-window-dialog-position",
-          "data-user-content", "contenteditable"].includes(record.attributeName)) {
+        if (portal && portal.contains(record.target) &&
+            ["role", "data-testid", "data-open", "data-image-preview-dialog", "data-window-dialog-position",
+              "data-user-content", "contenteditable"].includes(record.attributeName)) {
           discoverAnnotationMounts(record.target);
           if (record.target.parentElement) discoverAnnotationMounts(record.target.parentElement);
         }
-        if (pageOwnerAttributes.includes(record.attributeName) &&
-            [...chromeRoots].some(root => record.target === root || record.target.contains(root))) {
-          removeDisconnectedChromeRoots();
+        if (!needsPruneChrome && pageOwnerAttrSet.has(record.attributeName)) {
+          for (const root of chromeRoots) {
+            if (record.target === root || record.target.contains(root)) {
+              needsPruneChrome = true;
+              if (pageControls.has(root)) needsRefreshPage = true;
+              break;
+            }
+          }
         }
         if (pageControls.has(record.target) &&
-            record.attributeName !== pageControls.get(record.target).attribute) refreshPageControls();
+            record.attributeName !== pageControls.get(record.target).attribute) needsRefreshPage = true;
         if (record.attributeName === "data-selected" &&
-            record.target.matches("button[data-sidebar-nav-item][data-command]")) refreshPageControls();
+            record.target.matches("button[data-sidebar-nav-item][data-command]")) needsRefreshPage = true;
         const quotaLabel = record.attributeName === "aria-label" &&
           (usageTriggers.has(record.target) || isUsageTriggerCandidate(record.target));
-        if (!["placeholder", "aria-label"].includes(record.attributeName) ||
+        const hoverOnlyAttr = ["tabindex", "data-side", "data-align", "data-kbd-chord"].includes(record.attributeName) ||
+          (record.attributeName === "aria-describedby" && !pageControls.has(record.target) && !dialog?.contains(record.target));
+        if (record.attributeName === "data-popup-open" || hoverOnlyAttr) {
+          popupOwnershipChanged = true;
+          if (record.attributeName === "data-popup-open") scanHoverTooltipForTrigger(record.target);
+        } else if (!["placeholder", "aria-label"].includes(record.attributeName) ||
             (record.attributeName === "aria-label" && record.target.hasAttribute("data-settings-scroll")) ||
             quotaLabel) {
           ownershipChanged = true;
@@ -2881,8 +3851,7 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           translateAttribute(record.target, record.attributeName);
         }
         if (record.attributeName === "data-placeholder") translateAttribute(record.target, record.attributeName);
-        if (record.attributeName === "data-popup-open") scanHoverTooltipForTrigger(record.target);
-        const popup = ownedPopupForTrigger(record.target);
+        const popup = record.target.hasAttribute("aria-haspopup") ? ownedPopupForTrigger(record.target) : null;
         if (popup && ownedPopup(popup)) {
           if (chromeMenuKind(record.target)) observeChromePopup(popup);
           scanOwnedPopup(popup);
@@ -2890,23 +3859,34 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
           const controlled = record.target.getAttribute("aria-controls");
           const inactivePopup = controlled && document.getElementById(controlled);
           if (inactivePopup && chromePopupObservers.has(inactivePopup)) stopObservingChromePopup(inactivePopup);
-          for (const popup of chromePopupObservers.keys()) {
-            if (!ownedPopup(popup)) stopObservingChromePopup(popup);
+          for (const activePopup of chromePopupObservers.keys()) {
+            if (!ownedPopup(activePopup)) stopObservingChromePopup(activePopup);
           }
         }
-        if (record.target.matches('[role="tooltip"][id]') && ownedPopup(record.target)) {
+        if (record.target.getAttribute("role") === "tooltip" && record.target.hasAttribute("id") &&
+            ownedPopup(record.target)) {
           observeChromePopup(record.target);
           scan(record.target, "portal");
         }
-        if (record.target.matches('button[data-base-ui-tooltip-trigger][aria-describedby]')) {
+        if ((record.attributeName === "aria-describedby" || record.attributeName === "role") &&
+            record.target.matches('button[data-base-ui-tooltip-trigger][aria-describedby]')) {
           observeAnnotationTooltips(record.target);
         }
-        if (record.target.matches('[role="menu"][aria-labelledby]')) {
-          if (ownedPopup(record.target)) scan(record.target, "portal");
-          else if (chromePopupObservers.has(record.target)) stopObservingChromePopup(record.target);
+        if ((record.target.getAttribute("role") === "menu" && record.target.hasAttribute("aria-labelledby")) ||
+            ((record.attributeName === "data-open" || record.attributeName === "role") &&
+              record.target.matches('[role="menu"],[role="dialog"],[role="toolbar"]'))) {
+          const owner = ownedPopup(record.target);
+          if (owner) {
+            if (owner.kind === "selectionMenu") observeChromePopup(record.target);
+            scan(record.target, "portal");
+          } else if (chromePopupObservers.has(record.target)) {
+            stopObservingChromePopup(record.target);
+          }
         }
-        const sessionPopup = record.target.closest('[role="menu"][aria-labelledby]');
-        if (ownedPopup(sessionPopup)?.kind === "sidebarNewSession") scan(sessionPopup, "portal");
+        if (chromePopupObservers.size) {
+          const sessionPopup = record.target.closest('[role="menu"][aria-labelledby]');
+          if (ownedPopup(sessionPopup)?.kind === "sidebarNewSession") scan(sessionPopup, "portal");
+        }
         if (dialog?.contains(record.target) && record.attributeName === "data-section-id") {
           scan(record.target, "settings");
         }
@@ -2917,25 +3897,30 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
             record.target.hasAttribute("data-settings-scroll") && record.target.hasAttribute("aria-label")) {
           scan(record.target, "settings");
         }
-        if (chromeRootFor(record.target) &&
-            ["data-command", "data-sidebar-nav-item", "data-sidebar-file-drop-kind",
-              "data-user-content", "contenteditable"].includes(record.attributeName)) {
+        if (["data-command", "data-sidebar-nav-item", "data-sidebar-file-drop-kind",
+          "data-user-content", "contenteditable"].includes(record.attributeName) && chromeRootFor(record.target)) {
           scan(record.target, "chrome");
         }
       }
     }
+    if (needsRefreshPage) refreshPageControls();
+    if (needsPruneChrome) removeDisconnectedChromeRoots(false);
     if (refreshColorPreview) syncColorPreview();
     for (const node of changedText) {
       if (dialog && dialog.contains(node)) scan(node, "settings");
-      else if (ownedPopup(node.parentElement)?.kind === "usage") {
-        scanOwnedPopup(ownedPopup(node.parentElement).popup);
-      } else if (ownedPopup(node.parentElement)) scan(node, "portal");
-      else if (chromeRootFor(node.parentElement)) scan(node, "chrome");
+      else {
+        const owner = ownedPopup(node.parentElement);
+        if (owner?.kind === "usage") scanOwnedPopup(owner.popup);
+        else if (owner) scan(node, "portal");
+        else if (chromeRootFor(node.parentElement)) scan(node, "chrome");
+      }
     }
-    if (ownershipChanged) {
+    if (ownershipChanged || popupOwnershipChanged) {
       for (const popup of chromePopupObservers.keys()) {
         if (!popup.isConnected || !ownedPopup(popup)) stopObservingChromePopup(popup);
       }
+    }
+    if (ownershipChanged) {
       for (const [node, entry] of tracked) {
         if (entry.group ? !validGroup(entry.group) : !eligible(node)) {
           restore(node, entry);
@@ -2952,26 +3937,110 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
   }
 
   const observer = new document.defaultView.MutationObserver(mutations);
+  function attachMainRoot(candidate) {
+    if (!candidate?.isConnected) return false;
+    const isNew = mainRoot !== candidate;
+    mainRoot = candidate;
+    if (!observedMainRoots.has(mainRoot)) {
+      observedMainRoots.add(mainRoot);
+      observer.observe(mainRoot, { childList: true });
+    }
+    if (isNew) discoverChromeRoots(mainRoot);
+    return true;
+  }
   discoverChromeRoots(document);
+  initialized = true;
   observer.observe(portal, {
     subtree: true, childList: true, characterData: true, attributes: true,
     attributeFilter: ["aria-expanded", "aria-controls", "aria-haspopup", "data-settings-dialog-root",
       "data-section-id", "data-subsetting-id", "data-settings-row", "data-user-content",
-      "contenteditable", "role", "class", "id", "aria-labelledby", "aria-label", "placeholder",
+      "contenteditable", "role", "id", "aria-labelledby", "aria-label", "placeholder",
       "data-value", "data-settings-header", "data-section-heading", "data-testid", "data-open",
       "data-image-preview-dialog", "data-window-dialog-position", "aria-describedby", "title"]
   });
   observer.observe(document.body, { childList: true });
-  if (mainRoot) observer.observe(mainRoot, { childList: true });
+  if (mainRoot) attachMainRoot(mainRoot);
+  const bootstrapShellReady = () =>
+    !!mainRoot?.isConnected &&
+    !!document.querySelector("[data-sidebar-live-width]") &&
+    !!document.querySelector('[data-rich-composer-footer],[data-testid="composer-pills"]');
+  let bootstrapObserver = null;
+  let bootstrapTimer = null;
+  if (!bootstrapShellReady()) {
+    const shellSelector = 'main[data-app-shell-main],[data-sidebar-live-width],[data-rich-composer-footer],[data-testid="composer-pills"],[data-testid="conversation-composer-area"],nav[data-sidebar-footer]';
+    const observedShellContainers = new WeakSet();
+    const watchShellContainer = (node, depth = 0) => {
+      if (!node || node.nodeType !== 1 || node === portal || observedShellContainers.has(node) ||
+          node.matches('[data-base-ui-portal],[data-testid="conversation-body"],#chat,.chat,[data-user-content],[contenteditable],[data-settings-dialog-root]')) return;
+      observedShellContainers.add(node);
+      bootstrapObserver?.observe(node, { childList: true });
+      if (depth < 2) {
+        for (const child of node.children) watchShellContainer(child, depth + 1);
+      }
+    };
+    bootstrapObserver = new document.defaultView.MutationObserver(records => {
+      if (stopped) return;
+      for (const record of records) {
+        if (record.target.nodeType === 1 &&
+            record.target.closest('[data-testid="conversation-body"],#chat,.chat,[data-user-content],[contenteditable],[data-settings-dialog-root]')) {
+          continue;
+        }
+        for (const node of record.addedNodes) {
+          if (node.nodeType !== 1) continue;
+          if (!mainRoot?.isConnected) {
+            const foundMain = node.matches("main[data-app-shell-main]")
+              ? node : node.querySelector("main[data-app-shell-main]");
+            if (foundMain) attachMainRoot(foundMain);
+          }
+          if (node.matches(shellSelector) || node.querySelector(shellSelector)) {
+            discoverChromeRoots(node);
+          } else {
+            watchShellContainer(node);
+          }
+        }
+      }
+      if (bootstrapShellReady()) {
+        bootstrapObserver?.disconnect();
+        bootstrapObserver = null;
+        if (bootstrapTimer !== null) {
+          document.defaultView.clearTimeout(bootstrapTimer);
+          bootstrapTimer = null;
+        }
+      }
+    });
+    for (const child of document.body.children) watchShellContainer(child);
+    if (mainRoot?.isConnected) watchShellContainer(mainRoot);
+    bootstrapTimer = document.defaultView.setTimeout(() => {
+      bootstrapObserver?.disconnect();
+      bootstrapObserver = null;
+      bootstrapTimer = null;
+    }, 15000);
+    bootstrapTimer?.unref?.();
+  }
   activate(findDialog(portal));
-  for (const portalNode of document.body.querySelectorAll(":scope > [data-base-ui-portal]")) {
-    scanChromePortal(portalNode);
+  for (const portalNode of document.querySelectorAll("[data-base-ui-portal]")) {
+    if (portalNode.parentElement === document.body || portalNode.parentElement === portal) {
+      scanChromePortal(portalNode);
+    }
   }
   return {
     stats,
     stop() {
       if (stopped) return;
       stopped = true;
+      bootstrapObserver?.disconnect();
+      bootstrapObserver = null;
+      if (bootstrapTimer !== null) {
+        document.defaultView.clearTimeout(bootstrapTimer);
+        bootstrapTimer = null;
+      }
+      if (timer !== null) {
+        document.defaultView.clearTimeout(timer);
+        timer = null;
+      }
+      drainInFlight = false;
+      drainChannel?.port1.close();
+      drainChannel?.port2.close();
       observer.disconnect();
       for (const rootObserver of chromeRootObservers.values()) rootObserver.disconnect();
       chromeRootObservers.clear();
@@ -2981,6 +4050,10 @@ export function startSettingsTranslation(document, dictionary, options = {}) {
         restoreUsagePopup(popup);
       }
       chromePopupObservers.clear();
+      feedbackPopups.clear();
+      sessionContextPopups.clear();
+      for (const boundaryObserver of sessionContextBoundaryObservers.values()) boundaryObserver.disconnect();
+      sessionContextBoundaryObservers.clear();
       usagePopupObserverStates.clear();
       for (const boundaryObserver of sidebarBoundaryObservers.values()) boundaryObserver.disconnect();
       sidebarBoundaryObservers.clear();

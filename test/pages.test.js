@@ -9,7 +9,7 @@ const help = "The agent will help you design your automation in a chat.";
 const explanation = "Use agents to handle recurring work on a cadence you choose or triggered by events. You can start from scratch or turn an existing agent skill into an automation.";
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 async function waitFor(predicate) {
-  const until = Date.now() + 3000;
+  const until = Date.now() + 4000;
   while (!predicate() && Date.now() < until) await tick();
   assert.ok(predicate(), "timed out waiting for page controls");
 }
@@ -171,6 +171,47 @@ test("customize static controls and owned Add items translate, not marketplace c
   dom.window.close();
 });
 
+test("native Customize heading and known fixed categories translate without scanning card values", async () => {
+  const markup = `<header data-content-leading-inset="true" data-f6-nav><h1>Customize</h1>
+    <div><div data-customize-category-header-row>
+      <div data-customize-category-drag-region><div data-customize-category-tabs-root="true"><div role="tablist">
+        <button role="tab"><span><span><span>Browse</span><span aria-hidden="true">Browse</span></span></span></button>
+        <button role="tab"><span><span><span>Installed</span><span aria-hidden="true">Installed</span></span></span></button>
+      </div></div></div><div></div><div><button data-testid="extensions-add-menu-trigger" aria-haspopup="menu">
+        <span data-component="content"><span data-component="label">Add</span></span></button></div>
+    </div></div><div data-window-caption-spacer="true"></div>
+    </header><div role="tabpanel"><div data-testid="customize-category-filter"><div><div role="tablist">
+      <button role="tab" aria-selected="true"><span>All</span></button>
+      <button role="tab" aria-selected="false"><span>Development</span></button>
+      <button role="tab" aria-selected="false"><span>Intelligence</span></button>
+      <button role="tab"><span>Fictional category</span></button>
+      <button role="tab"><span>Commerce</span><span id="category-count">12</span></button>
+    </div></div></div><article><h2>Development</h2><p>Intelligence</p>
+      <input value="All"><pre>Commerce</pre></article></div>`;
+  const { dom, document, overlay } = fixture(markup);
+  const heading = document.querySelector("h1");
+  const labels = [...document.querySelectorAll('[data-testid="customize-category-filter"] button > span:first-child')];
+  await waitFor(() => heading.textContent === "扩展中心" && labels[2].textContent === "智能");
+  assert.deepEqual(labels.map(label => label.textContent),
+    ["全部", "开发", "智能", "Fictional category", "Commerce"]);
+  assert.equal(document.querySelector('header [role="tab"]').textContent, "浏览浏览");
+  assert.equal(document.querySelector("article h2").textContent, "Development");
+  assert.equal(document.querySelector("article p").textContent, "Intelligence");
+  assert.equal(document.querySelector("input").value, "All");
+  assert.equal(document.querySelector("pre").textContent, "Commerce");
+  await tick();
+  const before = overlay.stats.callbacks;
+  document.getElementById("category-count").firstChild.nodeValue = "13";
+  document.querySelector("article p").firstChild.nodeValue = "Private replacement";
+  await tick();
+  assert.equal(overlay.stats.callbacks, before);
+  document.querySelector("[data-window-caption-spacer]").removeAttribute("data-window-caption-spacer");
+  await waitFor(() => heading.textContent === "Customize" && labels[0].textContent === "All");
+  overlay.stop();
+  assert.equal(document.querySelector("article p").textContent, "Private replacement");
+  dom.window.close();
+});
+
 test("owned work filters map exact display labels including same-named custom tabs without touching results", async () => {
   const { dom, document, overlay, show } = fixture(automation());
   await waitFor(() => document.querySelector("h1").textContent === "自动化");
@@ -242,5 +283,157 @@ test("work empty captions require the complete direct-child shell and fixed mess
   await tick();
   assert.equal(panel.querySelector("span").textContent, "Nothing here");
   overlay.stop();
+  dom.window.close();
+});
+
+test("customize live categories, section headers, and category heading translate while third-party cards remain English", async () => {
+  const categories = ["All", "Plan", "Build", "Review", "Test", "Ship", "Monitor", "Design", "Knowledge", "Data", "Communication"];
+  const markup = `<header data-content-leading-inset="true" data-f6-nav><h1>Customize</h1>
+    <div><div data-customize-category-header-row>
+      <div data-customize-category-drag-region><div data-customize-category-tabs-root="true"><div role="tablist">
+        <button role="tab">Browse</button>
+      </div></div></div><div></div><div><button data-testid="extensions-add-menu-trigger" aria-haspopup="menu">
+        <span data-component="content"><span data-component="label">Add</span></span></button></div>
+    </div></div><div data-window-caption-spacer="true"></div>
+    </header><div role="tabpanel">
+      <div data-testid="customize-category-filter"><div><div role="tablist">
+        ${categories.map((cat, i) => `<button role="tab" aria-selected="${i === 1}"><span><span><span>${cat}</span></span></span></button>`).join("\n        ")}
+      </div></div></div>
+      <h2 id="browse-integrations-heading">Plan</h2>
+      <section aria-labelledby="featured-heading">
+        <div><div><h2 id="featured-heading">Featured</h2><p>Standout ways to customize Copilot.</p></div></div>
+        <ul role="list"><li><article><h3>Airtable</h3><p>Sync records with Airtable base</p></article></li></ul>
+      </section>
+      <section aria-labelledby="plan-build-heading">
+        <div><div><h2 id="plan-build-heading">Plan, build, and ship</h2><p>Tools for planning work, testing experiences, and shipping with confidence.</p></div></div>
+        <ul role="list"><li><article><h3>Slack</h3><p>Send notifications to Slack</p></article></li></ul>
+      </section>
+      <section aria-labelledby="connect-heading">
+        <div><div><h2 id="connect-heading">Connect your work</h2><p>Bring the tools and context you use every day into Copilot.</p></div></div>
+        <ul role="list"><li><article><h3>Apify</h3><p>Extract data from web</p></article></li></ul>
+      </section>
+    </div>`;
+  const { dom, document, overlay } = fixture(markup);
+  const heading = document.querySelector("h1");
+  const browseHeading = document.getElementById("browse-integrations-heading");
+  const catLeaves = [...document.querySelectorAll('[data-testid="customize-category-filter"] button span span span')];
+  await waitFor(() => heading.textContent === "扩展中心" &&
+    browseHeading.textContent === "规划" &&
+    catLeaves[1].textContent === "规划" &&
+    document.getElementById("connect-heading")?.textContent === "连接你的工作" &&
+    document.querySelector('section[aria-labelledby="plan-build-heading"] p')?.textContent === "用于规划工作、测试体验和可靠交付的工具。" &&
+    document.querySelector('section[aria-labelledby="connect-heading"] p')?.textContent === "将日常使用的工具与上下文带入 Copilot。");
+  assert.equal(catLeaves[0].textContent, "全部");
+  assert.equal(catLeaves[1].textContent, "规划");
+  assert.equal(catLeaves[2].textContent, "构建");
+  assert.equal(catLeaves[3].textContent, "评审");
+  assert.equal(catLeaves[4].textContent, "测试");
+  assert.equal(catLeaves[5].textContent, "交付");
+  assert.equal(catLeaves[6].textContent, "监控");
+  assert.equal(catLeaves[7].textContent, "设计");
+  assert.equal(catLeaves[8].textContent, "知识");
+  assert.equal(catLeaves[9].textContent, "数据");
+  assert.equal(catLeaves[10].textContent, "沟通");
+
+  assert.equal(document.getElementById("featured-heading").textContent, "精选");
+  assert.equal(document.getElementById("plan-build-heading").textContent, "规划、构建与交付");
+  assert.equal(document.getElementById("connect-heading").textContent, "连接你的工作");
+  assert.equal(document.querySelector('section[aria-labelledby="plan-build-heading"] p').textContent, "用于规划工作、测试体验和可靠交付的工具。");
+  assert.equal(document.querySelector('section[aria-labelledby="connect-heading"] p').textContent, "将日常使用的工具与上下文带入 Copilot。");
+
+  // Third-party cards MUST stay English
+  assert.equal(document.querySelector("article h3").textContent, "Airtable");
+  assert.equal(document.querySelector("article p").textContent, "Sync records with Airtable base");
+
+  overlay.stop();
+  assert.equal(heading.textContent, "Customize");
+  assert.equal(browseHeading.textContent, "Plan");
+  assert.equal(catLeaves[1].textContent, "Plan");
+  assert.equal(document.getElementById("plan-build-heading").textContent, "Plan, build, and ship");
+  assert.equal(document.querySelector("article h3").textContent, "Airtable");
+  dom.window.close();
+});
+
+test("home page heading, prompt suggestion cards, disclaimer, status bar, and actions translate cleanly", async () => {
+  const markup = `<main data-app-shell-main>
+    <h1 class="sr-only">New</h1>
+    <p>GitHub Copilot uses AI. Check for mistakes.</p>
+    <div data-testid="conversation-composer-area">
+      <div data-testid="prompt-suggestions">
+        <button><span>Compare SQL and NoSQL database tradeoffs</span></button>
+        <button><span>Design a REST API for a task management service</span></button>
+        <button><span>Draft a product requirements doc for a mobile app</span></button>
+      </div>
+      <div role="status">
+        <span>You've used all of your AI credits.</span>
+        <span>Manage your budget to keep building.</span>
+        <button>Manage budget</button>
+      </div>
+      <div data-testid="home-actions">
+        <button>Try now</button>
+        <button>Dismiss</button>
+        <button>This computer</button>
+      </div>
+    </div>
+    <div data-testid="conversation-body"><p>User question about React</p><code>const a = 1;</code></div>
+  </main>`;
+  const dom = new JSDOM(`<body>${markup}<div id="portal-root"></div></body>`);
+  const { document } = dom.window;
+  const overlay = startSettingsTranslation(document, dictionary);
+  const h1 = document.querySelector("h1");
+  const p = document.querySelector("main > p");
+  const promptButtons = [...document.querySelectorAll('[data-testid="prompt-suggestions"] button span')];
+  const statusDiv = document.querySelector('div[role="status"]');
+  const actionButtons = [...document.querySelectorAll('[data-testid="home-actions"] button')];
+
+  await waitFor(() => h1.textContent === "新建" &&
+    p.textContent === "GitHub Copilot 使用 AI，请核对结果是否有误。" &&
+    promptButtons[0].textContent === "比较 SQL 和 NoSQL 数据库的权衡" &&
+    statusDiv.querySelector("button").textContent === "管理预算" &&
+    actionButtons[0].textContent === "立即体验" &&
+    actionButtons[1].textContent === "关闭" &&
+    actionButtons[2].textContent === "此计算机");
+
+  assert.equal(promptButtons[1].textContent, "为任务管理服务设计 REST API");
+  assert.equal(promptButtons[2].textContent, "为移动应用起草产品需求文档");
+  assert.equal(statusDiv.children[0].textContent, "你的 AI 点数已用尽。");
+  assert.equal(statusDiv.children[1].textContent, "管理预算以继续构建。");
+  assert.equal(actionButtons[0].textContent, "立即体验");
+  assert.equal(actionButtons[1].textContent, "关闭");
+  assert.equal(actionButtons[2].textContent, "此计算机");
+
+  // Conversation body stays untouched
+  assert.equal(document.querySelector('[data-testid="conversation-body"] p').textContent, "User question about React");
+  assert.equal(document.querySelector('[data-testid="conversation-body"] code').textContent, "const a = 1;");
+
+  overlay.stop();
+  assert.equal(h1.textContent, "New");
+  assert.equal(p.textContent, "GitHub Copilot uses AI. Check for mistakes.");
+  assert.equal(promptButtons[0].textContent, "Compare SQL and NoSQL database tradeoffs");
+  assert.equal(statusDiv.querySelector("button").textContent, "Manage budget");
+  assert.equal(actionButtons[0].textContent, "Try now");
+  dom.window.close();
+});
+
+test("composer placeholders in both text node and data-placeholder attribute translate and restore cleanly", async () => {
+  const placeholder = "Ask anything. Use / for commands or & for sessions…";
+  const markup = `<main data-app-shell-main>
+    <div data-testid="conversation-composer-area">
+      <div data-rich-composer-placeholder="true">${placeholder}</div>
+      <div role="textbox" contenteditable="true" data-placeholder="${placeholder}"></div>
+    </div>
+  </main>`;
+  const dom = new JSDOM(`<body>${markup}<div id="portal-root"></div></body>`);
+  const { document } = dom.window;
+  const overlay = startSettingsTranslation(document, dictionary);
+  const textDiv = document.querySelector('[data-rich-composer-placeholder="true"]');
+  const textbox = document.querySelector('div[role="textbox"]');
+
+  await waitFor(() => textDiv.textContent === "输入问题。用 / 调用命令或 & 引用会话…" &&
+    textbox.getAttribute("data-placeholder") === "输入问题。用 / 调用命令或 & 引用会话…");
+
+  overlay.stop();
+  assert.equal(textDiv.textContent, placeholder);
+  assert.equal(textbox.getAttribute("data-placeholder"), placeholder);
   dom.window.close();
 });

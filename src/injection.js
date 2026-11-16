@@ -1,11 +1,14 @@
 import { dictionary } from "./dictionary.js";
 import { startSettingsTranslation } from "./overlay.js";
 
+let cachedDefaultSource = null;
+
 export function injectionSource({ measure = false } = {}) {
-  return `(() => {
-    if (location.origin !== "http://tauri.localhost") return;
+  if (!measure && cachedDefaultSource) return cachedDefaultSource;
+  const source = `(() => {
+    if (location.origin !== "http://tauri.localhost") return false;
     const key = Symbol.for("github-copilot-zh.settings");
-    if (window[key]) return;
+    if (window[key]) return !!window[key].instance;
     const state = { instance: null, observer: null, timer: null, stopped: false, measure: ${measure === true},
       stop() {
         this.stopped = true;
@@ -19,7 +22,7 @@ export function injectionSource({ measure = false } = {}) {
     const start = () => {
       if (state.stopped || state.instance || !document.getElementById("portal-root")) return;
       state.observer?.disconnect();
-      clearTimeout(state.timer);
+      clearTimeout(this.timer);
       state.instance = (${startSettingsTranslation.toString()})(document, ${JSON.stringify(dictionary)}, { measure: state.measure });
     };
     const ready = () => {
@@ -37,7 +40,10 @@ export function injectionSource({ measure = false } = {}) {
     };
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ready, { once: true });
     else ready();
+    return !!state.instance;
   })()`;
+  if (!measure) cachedDefaultSource = source;
+  return source;
 }
 
 export const diagnosticStatusExpression = `(() => {
@@ -105,6 +111,7 @@ export async function registerInjection(cdp) {
 export async function evaluateInjection(cdp) {
   const result = await cdp.send("Runtime.evaluate", { expression: injectionSource(), returnByValue: true });
   if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+  return result.result?.value === true;
 }
 
 export async function removeInjection(cdp, identifier) {

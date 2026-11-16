@@ -2,7 +2,7 @@
 setlocal
 "%SystemRoot%\System32\where.exe" pwsh.exe >nul 2>&1
 if errorlevel 1 goto missing_powershell
-pwsh.exe -NoLogo -NoProfile -File "%~dp0start.ps1" -NoPauseOnError
+pwsh.exe -NoLogo -NoProfile -File "%~dp0start.ps1" -NoPauseOnError %*
 set "result=%errorlevel%"
 if "%result%"=="0" exit /b 0
 echo.
