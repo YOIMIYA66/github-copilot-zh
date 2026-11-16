@@ -108,7 +108,7 @@ test("translates only fixed settings labels and owned popup options", async () =
   const { dom, document } = fixture();
   const overlay = startSettingsTranslation(document, dictionary);
   await waitFor(() => document.querySelector('[aria-labelledby="approvals"] [role=menuitem]').textContent === "全部批准" &&
-    document.querySelector("#account-actions-menu [role=menuitem]").textContent === "更新授权");
+    document.querySelector("#account-actions-menu [role=menuitem]:last-child").textContent === "设为默认");
   assert.equal(document.querySelector("nav li span").textContent, "常规");
   assert.equal(document.querySelector("#nav-option-account span").textContent, "账户");
   assert.equal(document.querySelector('[id="nav-option-project%3Afictional"] span').textContent, "Accounts");

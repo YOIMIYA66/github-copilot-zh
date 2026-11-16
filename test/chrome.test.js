@@ -240,7 +240,16 @@ test("closed chrome popups and matching chat words do not trigger scans", async 
   const { dom, document } = fixture();
   for (const trigger of document.querySelectorAll('[aria-haspopup="menu"]')) trigger.setAttribute("aria-expanded", "false");
   const overlay = startSettingsTranslation(document, dictionary);
-  await new Promise(resolve => setTimeout(resolve, 50));
+  await waitFor(() => document.querySelector('[data-testid="artifact-files-pill"] span').textContent === "产物" &&
+    document.querySelector('nav[aria-labelledby="quick-links-heading"] li:last-child button span').textContent === "扩展中心");
+  let previous = "";
+  let stable = 0;
+  await waitFor(() => {
+    const current = JSON.stringify([overlay.stats.callbacks, overlay.stats.chromeScans, overlay.stats.portalScans]);
+    stable = current === previous ? stable + 1 : 0;
+    previous = current;
+    return stable >= 3;
+  });
   const before = { ...overlay.stats };
   document.querySelector(".chat").innerHTML = "<p>Theme</p><p>Light</p><p>Always ask</p><p>Prioritizes capable models for challenging tasks and deeper reasoning.</p>";
   await new Promise(resolve => setTimeout(resolve, 10));
@@ -314,7 +323,7 @@ test("verified model switch labels and updated details translate without renamin
   row.innerHTML = '<button role="switch" aria-checked="true"><span>On</span></button><span data-user-content>On</span>';
   popup.append(row);
   const description = document.querySelector("#model-details-generated p");
-  const english = "Prioritizes the most capable models for the most demanding tasks and complex reasoning.";
+  let english = "Prioritizes the most capable models for the most demanding tasks and complex reasoning.";
   description.textContent = english;
   const overlay = startSettingsTranslation(document, dictionary);
   await waitFor(() => row.querySelector("button span").textContent === "开启" && description.textContent === dictionary[english]);
@@ -324,6 +333,9 @@ test("verified model switch labels and updated details translate without renamin
   row.querySelector("button span").firstChild.nodeValue = "Off";
   await waitFor(() => row.querySelector("button span").textContent === "关闭");
   assert.equal(row.querySelector("button").getAttribute("aria-checked"), "false");
+  english = "Prioritizes versatile models for efficient everyday coding.";
+  description.textContent = english;
+  await waitFor(() => description.textContent === dictionary[english]);
   overlay.stop();
   assert.equal(description.textContent, english);
   assert.equal(row.querySelector("button span").textContent, "Off");
@@ -349,6 +361,432 @@ test("owned Settings composers do not require chat-only keyboard hints or genera
   await waitFor(() => title.textContent === "Mode");
   assert.equal(document.querySelector("#model-popup-generated [role=none] div").textContent, "Effort level");
   overlay.stop();
+  dom.window.close();
+});
+
+test("nested DIV actions separate fixed labels from selected values and keep inert parent menus as owners", async () => {
+  const { dom, document } = fixture();
+  document.getElementById("mode-trigger-generated").setAttribute("aria-label", "模式：交互, Ctrl + Shift + M");
+  const mode = document.getElementById("mode-popup-generated");
+  const model = document.getElementById("model-popup-generated");
+  document.getElementById("permissions-trigger-generated").parentElement.remove();
+  const trigger = (id, popup, label, value) => `<div><div data-menu-has-radio-item><div role="menuitem"
+    id="${id}" aria-haspopup="menu" aria-expanded="true" aria-controls="${popup}" data-popup-open>
+    <span><span><span>${label}</span><span>${value}</span></span></span></div></div></div>`;
+  mode.insertAdjacentHTML("beforeend", trigger("permissions-trigger-generated", "permissions-popup-generated", "Tool permissions", "Approve all"));
+  model.innerHTML = `<div role="menuitemradio" aria-checked="true"><span>High</span></div>` +
+    trigger("fictional-effort-trigger", "fictional-effort-popup", "Effort", "High");
+  model.insertAdjacentHTML("beforeend", trigger("fictional-model-choice", "fictional-model-list", "Model", "Model") +
+    `<div><div data-menu-has-radio-item><div role="menuitem" id="fictional-context-row"><span><span><span>Context window</span><span>200K</span></span></span></div></div></div>`);
+  for (const parent of [mode, model]) {
+    parent.parentElement.setAttribute("data-base-ui-inert", "");
+    parent.parentElement.setAttribute("aria-hidden", "true");
+  }
+  const permissions = document.getElementById("permissions-popup-generated");
+  const permissionsPortal = permissions.parentElement.parentElement;
+  permissionsPortal.remove();
+  permissions.setAttribute("data-nested", "");
+  permissions.parentElement.setAttribute("data-nested", "");
+  permissions.innerHTML = `<div><div data-menu-has-radio-item><div role="group">${[
+    ["Always ask", "Ask before running tools."], ["Assisted", "Uses AI to reduce approval prompts."],
+    ["Approve all", "Run tools without asking."]
+  ].map(([label, description]) => `<div role="menuitemradio" aria-checked="${label === "Assisted"}">
+    <span><span>${label}</span><span data-menu-description="true"><span>${description}</span></span></span></div>`).join("")}</div></div></div>`;
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-base-ui-portal", "");
+  const levels = ["Low", "Medium", "High", "Extra High", "Max"];
+  wrapper.innerHTML = `<div role="presentation" data-open data-nested><div role="menu" id="fictional-effort-popup"
+    aria-labelledby="fictional-effort-trigger" data-open data-nested data-rootownerid="${model.getAttribute("data-rootownerid")}">
+    <div><div data-menu-has-radio-item><div role="group">${levels.map(level =>
+      `<div role="menuitemradio" aria-checked="${level === "High"}"><span>${level}</span></div>`).join("")}</div></div></div>
+    </div></div>`;
+  document.body.append(wrapper);
+  const overlay = startSettingsTranslation(document, dictionary);
+  await waitFor(() => document.querySelector("#permissions-trigger-generated > span > span > span:first-child").textContent === "工具权限");
+  mode.parentElement.parentElement.append(permissionsPortal);
+  await waitFor(() => permissions.querySelectorAll("[data-menu-description]")[2].textContent === "运行工具前不再询问。" &&
+    wrapper.querySelectorAll("[role=menuitemradio]")[4].textContent === "最高");
+  assert.deepEqual([...permissions.querySelectorAll("[role=menuitemradio] > span > span:first-child")].map(node => node.textContent),
+    ["始终询问", "辅助模式", "全部允许"]);
+  assert.deepEqual([...wrapper.querySelectorAll("[role=menuitemradio]")].map(node => node.textContent),
+    ["低", "中", "高", "超高", "最高"]);
+  assert.equal(model.querySelector(":scope > [role=menuitemradio]").textContent, "High");
+  assert.equal(document.querySelector("#fictional-effort-trigger > span > span > span:last-child").textContent, "高");
+  assert.equal(document.querySelector("#permissions-trigger-generated > span > span > span:last-child").textContent, "全部允许");
+  assert.equal(document.querySelector("#permissions-trigger-generated > span > span > span:first-child").textContent, "工具权限");
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual([...permissions.querySelectorAll("[role=menuitemradio] > span > span:first-child")].map(node => node.textContent),
+    ["始终询问", "辅助模式", "全部允许"]);
+  assert.deepEqual([...permissions.querySelectorAll("[data-menu-description]")].map(node => node.textContent),
+    ["运行工具前询问。", "使用 AI 减少审批提示。", "运行工具前不再询问。"]);
+  permissions.querySelectorAll("[data-menu-description]")[0].lastElementChild.textContent = "Ask before running tools.";
+  permissions.querySelectorAll("[role=menuitemradio]")[1].firstElementChild.firstElementChild.textContent = "Assisted";
+  permissions.querySelectorAll("[role=menuitemradio]")[2].firstElementChild.firstElementChild.textContent = "Approve all";
+  permissions.querySelectorAll("[data-menu-description]")[2].lastElementChild.textContent = "Run tools without asking.";
+  await waitFor(() => permissions.querySelectorAll("[data-menu-description]")[0].textContent === "运行工具前询问。" &&
+    permissions.querySelectorAll("[role=menuitemradio]")[1].firstElementChild.firstElementChild.textContent === "辅助模式" &&
+    permissions.querySelectorAll("[role=menuitemradio]")[2].firstElementChild.firstElementChild.textContent === "全部允许" &&
+    permissions.querySelectorAll("[data-menu-description]")[2].textContent === "运行工具前不再询问。");
+  assert.equal(document.querySelector("#fictional-model-choice > span > span > span:first-child").textContent, "模型");
+  assert.equal(document.querySelector("#fictional-model-choice > span > span > span:last-child").textContent, "Model");
+  assert.equal(model.querySelector('#fictional-context-row > span > span > span').textContent, "上下文窗口");
+  assert.ok(model.textContent.includes("200K"));
+  assert.ok(mode.parentElement.hasAttribute("data-base-ui-inert"));
+  assert.equal(document.getElementById("mode-trigger-generated").getAttribute("aria-label"), "模式：交互, Ctrl + Shift + M");
+  assert.deepEqual([...mode.querySelectorAll("[role=menuitemradio] > span:first-child")].map(node => node.textContent),
+    ["Interactive", "Plan", "Autopilot"]);
+  assert.deepEqual([...wrapper.querySelectorAll("[role=menuitemradio]")].map(node => node.getAttribute("aria-checked")),
+    ["false", "false", "true", "false", "false"]);
+  document.querySelector("#fictional-effort-trigger > span > span > span:first-child").firstChild.nodeValue = "Fictional action";
+  await waitFor(() => wrapper.querySelectorAll("[role=menuitemradio]")[4].textContent === "Max");
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const before = { ...overlay.stats };
+  wrapper.querySelector("[role=menuitemradio] span").firstChild.nodeValue = "High";
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(overlay.stats.callbacks, before.callbacks);
+  assert.equal(overlay.stats.portalScans, before.portalScans);
+  overlay.stop();
+  dom.window.close();
+});
+
+test("image annotation labels and linked tooltips translate without reading the preview name or editor", async () => {
+  const { dom, document } = fixture();
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-base-ui-portal", "");
+  wrapper.innerHTML = `<div role="dialog" data-open data-testid="image-preview-dialog" data-image-preview-dialog
+    data-window-dialog-position="fullscreen" aria-label="Fictional image filename">
+    <div data-testid="browser-screenshot-annotation-editor"><div>
+      <canvas id="fictional-canvas"></canvas><img alt="Fictional image" src="data:image/png;base64,fictional">
+      <div contenteditable="true"><p id="fictional-annotation">Arrow Save Comment</p></div>
+      <div data-testid="browser-screenshot-annotation-toolbar"><div><div role="radiogroup" aria-label="Annotation tool">
+        ${["arrow", "rectangle", "pencil", "comment"].map((tool,index) => `<button role="radio" data-value="${tool}"
+          aria-checked="${index === 0}" data-base-ui-tooltip-trigger><span><span><span>${["Arrow", "Rectangle", "Pencil", "Comment"][index]}</span></span></span></button>`).join("")}
+        </div></div><div>${[["invisible", "Discard"], ["primary", "Save"]].map(([variant,label]) =>
+          `<button data-variant="${variant}" data-size="small" data-base-ui-tooltip-trigger>
+          <span data-component="content"><span data-component="label"><span>${label}</span></span></span></button>`).join("")}</div>
+      </div></div></div></div>`;
+  document.getElementById("portal-root").append(wrapper);
+  const preview = wrapper.firstElementChild;
+  const getAttribute = preview.getAttribute.bind(preview);
+  preview.getAttribute = name => {
+    if (name === "aria-label") throw new Error("Preview filename must not be read");
+    return getAttribute(name);
+  };
+  document.getElementById("fictional-canvas").getContext = () => { throw new Error("Canvas must not be accessed"); };
+  const overlay = startSettingsTranslation(document, dictionary);
+  const toolbar = document.querySelector('[data-testid="browser-screenshot-annotation-toolbar"]');
+  await waitFor(() => toolbar.querySelector('[data-variant="primary"]').textContent.trim() === "保存");
+  assert.deepEqual([...toolbar.querySelectorAll('[role="radio"]')].map(node => node.textContent),
+    ["箭头", "矩形", "画笔", "批注"]);
+  assert.deepEqual([...toolbar.querySelectorAll('[role="radio"]')].map(node => node.getAttribute("aria-checked")),
+    ["true", "false", "false", "false"]);
+  assert.equal(document.getElementById("fictional-annotation").textContent, "Arrow Save Comment");
+  preview.setAttribute("aria-label", "Fictional changed filename");
+  const before = { ...overlay.stats };
+  document.getElementById("fictional-annotation").textContent = "Save Rectangle";
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(document.getElementById("fictional-annotation").textContent, "Save Rectangle");
+  for (const key of ["chromeScans", "settingsScans", "portalScans"]) assert.equal(overlay.stats[key], before[key], key);
+  const tipWrapper = document.createElement("div");
+  tipWrapper.setAttribute("data-base-ui-portal", "");
+  tipWrapper.innerHTML = '<div role="tooltip" id="fictional-arrow-tip"><span>Arrow</span><kbd>A</kbd></div>';
+  toolbar.querySelector('[data-value="arrow"]').setAttribute("aria-describedby", "fictional-arrow-tip");
+  document.body.append(tipWrapper);
+  await waitFor(() => tipWrapper.querySelector("span").textContent === "箭头");
+  assert.equal(tipWrapper.querySelector("kbd").textContent, "A");
+  preview.removeAttribute("data-image-preview-dialog");
+  await waitFor(() => toolbar.querySelector('[data-value="arrow"]').textContent === "Arrow" &&
+    tipWrapper.querySelector("span").textContent === "Arrow");
+  preview.setAttribute("data-image-preview-dialog", "");
+  await waitFor(() => toolbar.querySelector('[data-value="arrow"]').textContent === "箭头" &&
+    tipWrapper.querySelector("span").textContent === "箭头");
+  overlay.stop();
+  assert.equal(toolbar.querySelector('[data-variant="primary"]').textContent.trim(), "Save");
+  assert.equal(getAttribute("aria-label"), "Fictional changed filename");
+  dom.window.close();
+});
+
+test("hover-owned fixed tooltips translate only active footer labels and preserve keyboard chords", async () => {
+  const dom = new JSDOM(`<body><main data-app-shell-main>
+    <nav data-sidebar-footer>
+      <button data-testid="sidebar-feedback-button"></button>
+      <button data-command="app.settings.open"></button>
+    </nav>
+    <div data-rich-composer-root="true" data-rc-consumer="prompt-composer">
+      <div data-rich-composer-footer="true">
+        <button id="fictional-mode" data-base-ui-tooltip-trigger aria-haspopup="menu"
+          aria-label="Mode: Interactive, Ctrl + Shift + M">Interactive</button>
+        <button id="fictional-model" data-base-ui-tooltip-trigger aria-haspopup="menu"
+          aria-label="Fictional model, model and reasoning, Ctrl + Shift + E">Fictional model</button>
+      </div>
+    </div>
+  </main><div id="portal-root"></div>
+  <div role="dialog" aria-label="Fictional cached feedback dialog"><span>Share feedback</span></div></body>`,
+  { pretendToBeVisual: true });
+  const { document } = dom.window;
+  const triggers = [
+    document.querySelector('button[data-testid="sidebar-feedback-button"]'),
+    document.querySelector('button[data-command="app.settings.open"]'),
+    document.getElementById("fictional-mode"),
+    document.getElementById("fictional-model")
+  ];
+  for (const trigger of triggers) {
+    const matches = trigger.matches.bind(trigger);
+    trigger.matches = selector => selector === ":hover" || matches(selector);
+  }
+  const labels = ["Share feedback", "Settings", "Mode", "Model & reasoning"];
+  const portals = labels.map((label, index) => {
+    const portal = document.createElement("div");
+    portal.setAttribute("data-base-ui-portal", "");
+    const presentation = document.createElement("div");
+    presentation.setAttribute("role", "presentation");
+    presentation.setAttribute("data-open", "");
+    presentation.setAttribute("data-side", "top");
+    presentation.setAttribute("data-align", "center");
+    const focusable = document.createElement("div");
+    focusable.setAttribute("data-open", "");
+    focusable.setAttribute("data-side", "top");
+    focusable.setAttribute("data-align", "center");
+    focusable.setAttribute("tabindex", "-1");
+    focusable.setAttribute("data-base-ui-focusable", "");
+    const title = document.createElement("span");
+    title.textContent = label;
+    focusable.append(title);
+    if (index > 0) {
+      const chord = document.createElement("span");
+      chord.setAttribute("data-kbd-chord", "");
+      const key = document.createElement("kbd");
+      key.textContent = `Fictional shortcut ${index}`;
+      chord.append(key);
+      focusable.append(chord);
+    }
+    presentation.append(focusable);
+    portal.append(presentation);
+    document.body.append(portal);
+    return { portal, title };
+  });
+  const overlay = startSettingsTranslation(document, dictionary);
+  assert.deepEqual(portals.map(({ title }) => title.textContent), labels);
+  for (const trigger of triggers) trigger.setAttribute("data-popup-open", "");
+  await waitFor(() => portals.every(({ title }, index) => title.textContent ===
+    ["分享反馈", "设置", "模式", "模型与推理"][index]));
+  assert.equal(document.querySelector('[role="dialog"] span').textContent, "Share feedback");
+  assert.deepEqual(portals.slice(1).map(({ portal }) => portal.querySelector("[data-kbd-chord]").textContent),
+    ["Fictional shortcut 1", "Fictional shortcut 2", "Fictional shortcut 3"]);
+  triggers[0].removeAttribute("data-popup-open");
+  await waitFor(() => portals[0].title.textContent === "Share feedback");
+  triggers[0].setAttribute("data-popup-open", "");
+  await waitFor(() => portals[0].title.textContent === "分享反馈");
+  overlay.stop();
+  assert.deepEqual(portals.map(({ title }) => title.textContent), labels);
+  dom.window.close();
+});
+
+test("annotation toolbar mounts after its preview without scanning editor content", async () => {
+  const { dom, document } = fixture();
+  const overlay = startSettingsTranslation(document, dictionary);
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-base-ui-portal", "");
+  document.getElementById("portal-root").append(wrapper);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const preview = document.createElement("div");
+  preview.setAttribute("role", "dialog");
+  preview.setAttribute("data-open", "");
+  preview.setAttribute("data-testid", "image-preview-dialog");
+  preview.setAttribute("data-image-preview-dialog", "");
+  preview.setAttribute("data-window-dialog-position", "fullscreen");
+  const getAttribute = preview.getAttribute.bind(preview);
+  preview.getAttribute = name => {
+    if (name === "aria-label") throw new Error("Preview filename must not be read");
+    return getAttribute(name);
+  };
+  wrapper.append(preview);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const editor = document.createElement("div");
+  editor.setAttribute("data-testid", "browser-screenshot-annotation-editor");
+  preview.append(editor);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const mount = document.createElement("div");
+  mount.innerHTML = '<canvas></canvas><div contenteditable="true"><p>Save Arrow</p></div>';
+  const canvas = mount.querySelector("canvas");
+  canvas.getContext = () => { throw new Error("Canvas must not be accessed"); };
+  const privateText = mount.querySelector("p");
+  Object.defineProperty(privateText, "textContent", {
+    get() { throw new Error("Annotation text must not be read"); }
+  });
+  editor.append(mount);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const before = { ...overlay.stats };
+  const toolbar = document.createElement("div");
+  toolbar.setAttribute("data-testid", "browser-screenshot-annotation-toolbar");
+  toolbar.innerHTML = `<div><div role="radiogroup" aria-label="Annotation tool">
+    ${["arrow", "rectangle", "pencil", "comment"].map((tool, index) =>
+      `<button role="radio" data-value="${tool}" aria-checked="${index === 0}" data-base-ui-tooltip-trigger>
+      <span><span><span>${["Arrow", "Rectangle", "Pencil", "Comment"][index]}</span></span></span></button>`).join("")}
+    </div></div><div>${[["invisible", "Discard"], ["primary", "Save"]].map(([variant, label]) =>
+      `<button data-variant="${variant}" data-size="small" data-base-ui-tooltip-trigger>
+      <span data-component="content"><span data-component="label"><span>${label}</span></span></span></button>`).join("")}</div>`;
+  mount.append(toolbar);
+  await waitFor(() => toolbar.querySelector('[data-variant="primary"]').textContent.trim() === "保存");
+  assert.deepEqual([...toolbar.querySelectorAll("button")].map(node => node.textContent.trim()),
+    ["箭头", "矩形", "画笔", "批注", "放弃", "保存"]);
+  assert.equal(overlay.stats.chromeScans, before.chromeScans + 1);
+  assert.equal(overlay.stats.settingsScans, before.settingsScans);
+  assert.equal(overlay.stats.portalScans, before.portalScans);
+  const settled = { ...overlay.stats };
+  privateText.firstChild.nodeValue = "Comment Save";
+  canvas.append(document.createElement("span"));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  for (const key of ["chromeScans", "settingsScans", "portalScans"]) {
+    assert.equal(overlay.stats[key], settled[key], key);
+  }
+  mount.remove();
+  await waitFor(() => toolbar.querySelector('[data-variant="primary"]').textContent.trim() === "Save");
+  editor.append(mount);
+  await waitFor(() => toolbar.querySelector('[data-variant="primary"]').textContent.trim() === "保存");
+  overlay.stop();
+  assert.equal(toolbar.querySelector('[data-variant="primary"]').textContent.trim(), "Save");
+  dom.window.close();
+});
+
+test("new-session menu observes only command labels and its exact decorative header, not repository values", async () => {
+  const dom = new JSDOM(`<body><aside data-sidebar-live-width><div data-sidebar-session-list="true"><div>
+    <h3 id="sidebar-sessions-heading">Sessions</h3><div>
+    <button data-testid="sidebar-new-session" id="fictional-new-session" aria-haspopup="menu"
+      aria-expanded="false"></button>
+    <button data-testid="sidebar-session-configuration" id="fictional-configuration" aria-haspopup="menu"
+      aria-expanded="true" aria-controls="fictional-unowned-popup"></button>
+    </div></div></div></aside><main data-app-shell-main><p>Start session in</p><p>Chat</p></main>
+    <div id="portal-root"></div>
+    ${menu("fictional-unowned-popup", "fictional-configuration", '<div><div><div role="menuitem" data-command="chat.create"><span>Chat</span></div></div></div>')}
+    </body>`);
+  const document = dom.window.document;
+  const overlay = startSettingsTranslation(document, dictionary);
+  const trigger = document.getElementById("fictional-new-session");
+  const wrapper = document.createElement("div");
+  wrapper.setAttribute("data-base-ui-portal", "");
+  wrapper.innerHTML = `<div role="presentation" data-open><div role="menu" id="fictional-new-popup"
+    aria-labelledby="${trigger.id}" data-open data-rootownerid="fictional-root"><div><div>
+    <div role="menuitem" data-command="chat.create"><span>Chat</span></div>
+    <div role="none"><div aria-hidden="true">Start session in</div>
+    <div role="menuitem" data-command="session.create-with-repository"><span id="fictional-private-repository">Chat</span></div>
+    ${[["project.add-github", "Add from GitHub"], ["project.add-from-url", "Add from URL"],
+      ["project.add-folder", "Add local folder or repository"]].map(([command, label]) =>
+      `<div role="menuitem" data-command="${command}"><span>${label}</span></div>`).join("")}
+    </div></div></div></div></div>`;
+  const privateLabel = wrapper.querySelector("#fictional-private-repository");
+  Object.defineProperty(privateLabel, "textContent", {
+    get() { throw new Error("Repository values must not be read"); }
+  });
+  Object.defineProperty(privateLabel.firstChild, "nodeValue", {
+    get() { throw new Error("Repository text must not be traversed"); },
+    set(value) { this.data = value; }
+  });
+  trigger.setAttribute("aria-controls", "fictional-new-popup");
+  trigger.setAttribute("aria-expanded", "true");
+  document.body.append(wrapper);
+  const popup = wrapper.querySelector("[role=menu]");
+  const chat = popup.querySelector('[data-command="chat.create"] > span');
+  const header = popup.querySelector('[aria-hidden="true"]');
+  const github = popup.querySelector('[data-command="project.add-github"] > span');
+  let folder = popup.querySelector('[data-command="project.add-folder"] > span');
+  await waitFor(() => folder.textContent === "添加本地文件夹或仓库" &&
+    header.textContent === "在以下位置启动会话");
+  assert.equal(chat.textContent, "聊天");
+  assert.equal(header.textContent, "在以下位置启动会话");
+  assert.equal(github.textContent, "从 GitHub 添加");
+  assert.equal(popup.querySelector('[data-command="project.add-from-url"] > span').textContent, "从 URL 添加");
+  assert.equal(document.getElementById("fictional-unowned-popup").querySelector("span").textContent, "Chat");
+  assert.equal(document.querySelector("main").textContent, "Start session inChat");
+  await new Promise(resolve => setTimeout(resolve, 0));
+  const before = { ...overlay.stats };
+  privateLabel.firstChild.nodeValue = "Fictional repository";
+  await new Promise(resolve => setTimeout(resolve, 0));
+  for (const key of ["callbacks", "chromeScans", "portalScans", "settingsScans"]) {
+    assert.equal(overlay.stats[key], before[key], key);
+  }
+  github.parentElement.setAttribute("data-command", "session.create-with-repository");
+  await waitFor(() => github.textContent === "Add from GitHub");
+  const revokedBefore = { ...overlay.stats };
+  github.textContent = "Fictional changed repository";
+  await new Promise(resolve => setTimeout(resolve, 0));
+  for (const key of ["callbacks", "chromeScans", "portalScans", "settingsScans"]) {
+    assert.equal(overlay.stats[key], revokedBefore[key], key);
+  }
+  github.textContent = "Add from GitHub";
+  github.parentElement.setAttribute("data-command", "project.add-github");
+  await waitFor(() => github.textContent === "从 GitHub 添加");
+  const replacement = document.createElement("span");
+  replacement.textContent = "Add local folder or repository";
+  folder.replaceWith(replacement);
+  folder = replacement;
+  await waitFor(() => folder.textContent === "添加本地文件夹或仓库");
+  folder.firstChild.nodeValue = "Future action";
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(folder.textContent, "Future action");
+  folder.firstChild.nodeValue = "Add local folder or repository";
+  await waitFor(() => folder.textContent === "添加本地文件夹或仓库");
+  header.setAttribute("aria-hidden", "false");
+  await waitFor(() => header.textContent === "Start session in");
+  header.setAttribute("aria-hidden", "true");
+  await waitFor(() => header.textContent === "在以下位置启动会话");
+  trigger.setAttribute("aria-expanded", "false");
+  await waitFor(() => folder.textContent === "Add local folder or repository");
+  assert.equal(header.textContent, "Start session in");
+  trigger.setAttribute("aria-expanded", "true");
+  await waitFor(() => folder.textContent === "添加本地文件夹或仓库");
+  overlay.stop();
+  assert.equal(chat.textContent, "Chat");
+  assert.equal(header.textContent, "Start session in");
+  dom.window.close();
+});
+
+test("sidebar section labels use fixed headings and group identities without walking project or session entries", async () => {
+  const dom = new JSDOM(`<body><main data-app-shell-main><aside data-sidebar-live-width><div>
+    <div data-testid="sidebar-scroll-viewport"><div><div><section aria-labelledby="sidebar-agents-heading">
+      <div data-sidebar-section-header><h3 id="sidebar-agents-heading"><button aria-expanded="true"><span>Projects</span></button></h3></div>
+      <ul role="tree" id="fictional-project-tree"><li role="treeitem">No projects yet</li></ul>
+    </section></div></div></div>
+    <div data-sidebar-session-list="true"><div><h3 id="sidebar-sessions-heading">Sessions</h3>
+      <ul role="presentation"><li role="presentation"><section aria-labelledby="fictional-session-group-heading">
+        <div data-sidebar-section-header><h4 id="fictional-session-group-heading"><button><span>Sessions</span></button></h4></div>
+        <ul role="tree" aria-labelledby="fictional-session-group-heading" data-sidebar-session-summary-hint-group="fictional-session-group-heading">
+          <li role="treeitem"><div data-testid="repository-group-row"><div id="sidebar-group-quick-chats"><span><span>Fictional private value</span><span>Fictional count</span></span><span>Chats</span></div></div></li>
+          <li role="treeitem"><div><p id="fictional-session-name">Sessions</p></div></li>
+        </ul>
+      </section></li></ul></div></div>
+    </div></aside></main><div id="portal-root"></div></body>`);
+  const { document } = dom.window;
+  const count = document.getElementById("sidebar-group-quick-chats").firstElementChild;
+  Object.defineProperty(count, "textContent", { get() { throw new Error("Chat group count must not be read"); } });
+  const overlay = startSettingsTranslation(document, dictionary);
+  const tree = document.getElementById("fictional-project-tree");
+  await waitFor(() => document.querySelector("#sidebar-group-quick-chats > span:last-child").textContent === "聊天" &&
+    document.getElementById("sidebar-sessions-heading").textContent === "会话" && tree.textContent === "暂无项目");
+  assert.equal(document.querySelector("#sidebar-agents-heading span").textContent, "项目");
+  assert.equal(document.querySelector("#fictional-session-group-heading span").textContent, "会话");
+  tree.innerHTML = '<li role="treeitem"><div><p id="fictional-project-name">Projects</p></div></li>';
+  await new Promise(resolve => setTimeout(resolve, 0));
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(document.getElementById("fictional-project-name").textContent, "Projects");
+  assert.equal(document.getElementById("fictional-session-name").textContent, "Sessions");
+  const before = { ...overlay.stats };
+  for (let i = 0; i < 100; i++) {
+    document.getElementById("fictional-project-name").textContent = `Fictional project ${i}`;
+    document.getElementById("fictional-session-name").textContent = `Fictional session ${i}`;
+    count.firstElementChild.textContent = `Fictional private value ${i}`;
+    count.lastElementChild.textContent = String(i);
+  }
+  await new Promise(resolve => setTimeout(resolve, 0));
+  for (const key of ["callbacks", "chromeScans", "settingsScans", "portalScans"]) assert.equal(overlay.stats[key], before[key], key);
+  tree.innerHTML = '<li role="treeitem">No projects yet</li>';
+  await waitFor(() => tree.textContent === "暂无项目");
+  document.querySelector('[data-sidebar-session-summary-hint-group]').setAttribute("aria-labelledby", "fictional-unrelated-heading");
+  await waitFor(() => document.querySelector("#sidebar-group-quick-chats > span:last-child").textContent === "Chats" &&
+    document.querySelector("#fictional-session-group-heading span").textContent === "Sessions");
+  overlay.stop();
+  assert.equal(document.querySelector("#sidebar-agents-heading span").textContent, "Projects");
+  assert.equal(tree.textContent, "No projects yet");
   dom.window.close();
 });
 
@@ -394,6 +832,28 @@ test("unverified work and automation tabs, result content and empty states are n
     assert.equal(overlay.stats[key], before[key], `${key} changed for unverified page content`);
   }
   overlay.stop();
+  dom.window.close();
+});
+
+test("New issue translates only the Issues header action and leaves result content untouched", async () => {
+  const { dom, document } = fixture();
+  for (const trigger of document.querySelectorAll('[aria-haspopup="menu"]')) trigger.setAttribute("aria-expanded", "false");
+  const main = document.querySelector("main[data-app-shell-main]");
+  const route = document.createElement("div");
+  route.innerHTML = `<div><div><div><div data-testid="my-work-inbox-view">
+    <div data-testid="my-work-list-pane"><header data-content-leading-inset="true" data-tauri-drag-region="true" data-f6-nav="true">
+      <div><button data-command="issue.create"><div><span>New issue</span></div></button></div>
+      <div><div><h1>Issues</h1></div></div>
+    </header><article><h2>Fictional issue title</h2><p>New issue</p></article></div>
+  </div></div></div></div>`;
+  main.append(route);
+  const overlay = startSettingsTranslation(document, dictionary);
+  const label = route.querySelector('button[data-command="issue.create"] span');
+  await waitFor(() => label.textContent === "新建议题");
+  assert.equal(route.querySelector("article h2").textContent, "Fictional issue title");
+  assert.equal(route.querySelector("article p").textContent, "New issue");
+  overlay.stop();
+  assert.equal(label.textContent, "New issue");
   dom.window.close();
 });
 

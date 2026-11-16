@@ -18,6 +18,19 @@ const dom = new JSDOM(`<body><main data-app-shell-main data-f6-nav><div data-tes
   </div><div data-rich-composer-footer></div></div><div id="chat"></div>
   </div></main><div id="portal-root"></div></body>`);
 const { document } = dom.window;
+document.querySelector('[data-testid="sidebar-scroll-viewport"] > div').insertAdjacentHTML("beforeend",
+  `<div><section aria-labelledby="sidebar-agents-heading"><div data-sidebar-section-header>
+    <h3 id="sidebar-agents-heading"><button aria-expanded="true"><span>Projects</span></button></h3></div>
+    <ul role="tree"><li role="treeitem"><div><p id="fictional-project-name">Fictional project</p></div></li></ul>
+  </section></div>`);
+document.querySelector("[data-sidebar-live-width] > div").insertAdjacentHTML("beforeend",
+  `<div data-sidebar-session-list="true"><div><h3 id="sidebar-sessions-heading">Sessions</h3>
+    <ul role="presentation"><li role="presentation"><section aria-labelledby="fictional-session-heading">
+      <div data-sidebar-section-header><h4 id="fictional-session-heading"><button><span>Sessions</span></button></h4></div>
+      <ul role="tree" aria-labelledby="fictional-session-heading" data-sidebar-session-summary-hint-group="fictional-session-heading">
+        <li role="treeitem"><div data-testid="repository-group-row"><div id="sidebar-group-quick-chats"><span><span>Fictional private value</span><span>0</span></span><span>Chats</span></div></div></li>
+        <li role="treeitem"><div><p id="fictional-session-name">Fictional session</p></div></li>
+      </ul></section></li></ul></div></div>`);
 const chat = document.querySelector("#chat");
 for (let i = 0; i < 5000; i++) {
   const span = document.createElement("span");
@@ -63,6 +76,18 @@ async function run(label) {
     elapsedMs: Number((performance.now() - started).toFixed(2)) }));
 }
 await run("settings closed");
+const sidebarContentBefore = { ...overlay.stats };
+for (let i = 0; i < 1000; i++) {
+  document.getElementById("fictional-project-name").textContent = `Fictional project ${i}`;
+  document.getElementById("fictional-session-name").textContent = `Fictional session ${i}`;
+  document.querySelector("#sidebar-group-quick-chats > span:first-child > span:last-child").textContent = String(i);
+}
+await wait();
+for (const key of ["settingsScans", "chromeScans", "portalScans", "callbacks"]) {
+  if (overlay.stats[key] !== sidebarContentBefore[key]) throw new Error(`Sidebar entry updates reached ${key}`);
+}
+console.log(JSON.stringify({ label: "sidebar user entries and counts", updates: 3000,
+  settingsScans: 0, chromeScans: 0, portalScans: 0, callbacks: 0 }));
 const dialog = document.createElement("div");
 dialog.setAttribute("role", "dialog");
 dialog.setAttribute("data-settings-dialog-root", "");
@@ -118,6 +143,28 @@ await run("unverified Automations page present");
 page.remove();
 await wait();
 await run("work pages removed");
+const verifiedWork = document.createElement("div");
+verifiedWork.innerHTML = `<div data-testid="my-work-inbox-view"><div data-testid="my-work-list-pane">
+  <header data-content-leading-inset data-tauri-drag-region data-f6-nav><div><div><h1>Pull requests</h1></div></div></header>
+  <div data-testid="my-work-filter-bar"><div><div data-tab-row-scroller><div role="tablist">
+    ${["Authored by me", "Assigned to me", "Involves me", "Review requests", "Done"].map((label,index) =>
+      `<button role="tab" aria-selected="${index === 0}" data-tauri-drag-region="false"><span>${label}</span></button>`).join("")}
+  </div></div></div></div><div><div data-testid="my-work-inbox-scroll-container" role="tabpanel">
+    <div id="work-results"><article><p>Fictional result</p></article></div></div></div>
+</div></div>`;
+document.querySelector("main").append(verifiedWork);
+await settle(() => verifiedWork.querySelectorAll('[role="tab"]')[4].textContent === "已完成");
+await run("verified PR filters present");
+const resultsBefore = { ...overlay.stats };
+for (let i = 0; i < 1000; i++) verifiedWork.querySelector("#work-results p").textContent = `Fictional result ${i}`;
+await wait();
+for (const key of ["settingsScans", "portalScans", "chromeScans", "callbacks"]) {
+  if (overlay.stats[key] !== resultsBefore[key]) throw new Error(`Work result updates reached ${key}`);
+}
+console.log(JSON.stringify({ label: "work result updates", updates: 1000,
+  settingsScans: 0, portalScans: 0, chromeScans: 0, callbacks: 0 }));
+verifiedWork.remove();
+await wait();
 const verifiedPage = document.createElement("div");
 verifiedPage.innerHTML = `<div><div><div><div><div data-factory-proposal-host="true"><header><h1>Automations</h1>
   <div><div data-customize-category-header-row><div data-customize-category-drag-region><div><div>
@@ -179,5 +226,31 @@ console.log(JSON.stringify({ label: "sidebar label updates", controls: 5, update
   elapsedMs: Number((performance.now() - sidebarStart).toFixed(2)),
   drainBatches: summarize(overlay.stats.batchMs.slice(batchesBefore)),
   observerCallbacks: summarize(overlay.stats.callbackMs.slice(callbackSamplesBefore)) }));
+document.querySelector('[data-sidebar-session-list="true"] > div').insertAdjacentHTML("beforeend",
+  '<div><button data-testid="sidebar-new-session" id="fictional-new-session" aria-haspopup="menu" aria-expanded="true" aria-controls="fictional-new-popup"></button></div>');
+const sessionMenu = document.createElement("div");
+sessionMenu.setAttribute("data-base-ui-portal", "");
+sessionMenu.innerHTML = `<div role="presentation" data-open><div role="menu" id="fictional-new-popup"
+  aria-labelledby="fictional-new-session" data-open data-rootownerid="fictional-root"><div><div>
+  <div role="menuitem" data-command="chat.create"><span>Chat</span></div><div role="none">
+  <div aria-hidden="true">Start session in</div>
+  <div role="menuitem" data-command="session.create-with-repository"><span id="fictional-menu-repository">Fictional repository</span></div>
+  ${[["project.add-github", "Add from GitHub"], ["project.add-from-url", "Add from URL"],
+    ["project.add-folder", "Add local folder or repository"]].map(([command, label]) =>
+    `<div role="menuitem" data-command="${command}"><span>${label}</span></div>`).join("")}
+  </div></div></div></div></div>`;
+document.body.append(sessionMenu);
+await run("new-session menu present");
+const repositoryBefore = { ...overlay.stats };
+const repositoryStart = performance.now();
+const repositoryText = sessionMenu.querySelector("#fictional-menu-repository").firstChild;
+for (let i = 0; i < 1000; i++) repositoryText.nodeValue = `Fictional repository ${i}`;
+await wait();
+for (const key of ["settingsScans", "chromeScans", "portalScans", "callbacks"]) {
+  if (overlay.stats[key] !== repositoryBefore[key]) throw new Error(`Menu repository updates reached ${key}`);
+}
+console.log(JSON.stringify({ label: "new-session menu repository values", updates: 1000,
+  settingsScans: 0, chromeScans: 0, portalScans: 0, callbacks: 0,
+  elapsedMs: Number((performance.now() - repositoryStart).toFixed(2)) }));
 overlay.stop();
 dom.window.close();

@@ -1,0 +1,3 @@
+# Preserve the accepted source pair byte-for-byte, including its CRLF endings.
+/src/overlay.js -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/src/dictionary.js -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

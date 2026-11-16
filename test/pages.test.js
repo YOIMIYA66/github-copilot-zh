@@ -59,7 +59,10 @@ function work(title) {
   return `<div data-testid="my-work-inbox-view"><div data-testid="my-work-list-pane">
     <header data-content-leading-inset data-tauri-drag-region data-f6-nav><div><div><h1>${title}</h1></div></div></header>
     <div data-testid="my-work-filter-bar"><div><div data-tab-row-scroller><div role="tablist">
-      <button role="tab">Assigned to me</button><button role="tab">Done</button><button role="tab">Assigned to me</button>
+      <button role="tab" aria-selected="true" data-tauri-drag-region="false">Assigned to me</button>
+      <button role="tab" aria-selected="false" data-tauri-drag-region="false">Done</button>
+      <button role="tab" aria-selected="false" data-tauri-drag-region="false">Assigned to me</button>
+      <button role="tab" aria-selected="false" data-tauri-drag-region="false">Fictional custom filter</button>
     </div></div></div></div><div><div data-testid="my-work-inbox-scroll-container" role="tabpanel" data-f6-nav>
       <div><div data-size="medium"><div><div><span>Nothing here</span></div></div></div></div>
       <article><h2>Nothing here</h2><p>No items match "Fictional filter"</p></article>
@@ -168,12 +171,14 @@ test("customize static controls and owned Add items translate, not marketplace c
   dom.window.close();
 });
 
-test("the observed route boundary discovers page switches but never translates indistinguishable work tabs or results", async () => {
+test("owned work filters map exact display labels including same-named custom tabs without touching results", async () => {
   const { dom, document, overlay, show } = fixture(automation());
   await waitFor(() => document.querySelector("h1").textContent === "自动化");
   show(work("Pull requests"), true);
-  await waitFor(() => document.querySelector("h1").textContent === "拉取请求");
-  assert.deepEqual([...document.querySelectorAll("[role=tab]")].map(node => node.textContent), ["Assigned to me", "Done", "Assigned to me"]);
+  await waitFor(() => document.querySelector("h1").textContent === "拉取请求" &&
+    document.querySelectorAll("[role=tab]")[2].textContent === "分配给我的");
+  assert.deepEqual([...document.querySelectorAll("[role=tab]")].map(node => node.textContent),
+    ["分配给我的", "已完成", "分配给我的", "Fictional custom filter"]);
   assert.equal(document.querySelector("[data-size=medium] span").textContent, "Nothing here");
   show(work("Issues"), true);
   await waitFor(() => document.querySelector("h1").textContent === "议题");
@@ -208,6 +213,34 @@ test("starting in the primary chat composer discovers a later page without obser
   await tick();
   show(automation());
   await waitFor(() => document.querySelector("h1").textContent === "自动化");
+  overlay.stop();
+  dom.window.close();
+});
+
+test("work empty captions require the complete direct-child shell and fixed message prefix", async () => {
+  const { dom, document, overlay } = fixture(work("Issues"));
+  const panel = document.querySelector("[data-testid=my-work-inbox-scroll-container]");
+  panel.innerHTML = `<div><div data-size="medium"><div><div><span>Nothing here</span></div>
+    <div>No items match "Fictional saved filter"</div></div></div></div>`;
+  const caption = panel.querySelector("span");
+  const message = panel.querySelector("[data-size] > div > div:last-child");
+  const getText = Object.getOwnPropertyDescriptor(dom.window.Node.prototype, "textContent");
+  Object.defineProperty(message, "textContent", { get() { throw new Error("Filter name must not be captured"); } });
+  await waitFor(() => caption.textContent === "这里暂无内容");
+  assert.equal(getText.get.call(message), 'No items match "Fictional saved filter"');
+  message.firstChild.nodeValue = "Fictional user description";
+  await waitFor(() => caption.textContent === "Nothing here");
+  panel.innerHTML = '<div><article><h2>Nothing here</h2><p>No items match "Fictional body text"</p></article></div>';
+  await tick();
+  await tick();
+  assert.equal(panel.querySelector("h2").textContent, "Nothing here");
+  const before = { ...overlay.stats };
+  for (let i = 0; i < 100; i++) panel.querySelector("p").textContent = `Fictional result ${i}`;
+  await tick();
+  for (const key of ["settingsScans", "portalScans", "chromeScans", "callbacks"]) assert.equal(overlay.stats[key], before[key], key);
+  panel.innerHTML = '<div><div data-size="medium"><div><div><span>Nothing here</span></div><div>Fictional result summary</div></div></div></div>';
+  await tick();
+  assert.equal(panel.querySelector("span").textContent, "Nothing here");
   overlay.stop();
   dom.window.close();
 });
